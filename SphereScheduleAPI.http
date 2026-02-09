@@ -1,0 +1,6 @@
+@SphereScheduleAPI_HostAddress = http://localhost:5087
+
+GET {{SphereScheduleAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
