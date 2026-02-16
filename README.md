@@ -127,7 +127,7 @@ dotnet ef database update
 
 1️⃣ Clone Repository
 
-git clone https://github.com/yourusername/SphereScheduleAPI.git
+git clone https://github.com/FarisShikuku/SphereScheduleAPI.git
 
 2️⃣ Navigate to Project
 
