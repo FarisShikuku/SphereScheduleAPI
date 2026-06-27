@@ -6,24 +6,24 @@ namespace SphereScheduleAPI.Domain.Entities
     public class Reminder : BaseEntity
     {
         [Key]
-        public Guid ReminderId { get; set; }
+        public Guid ReminderID { get; set; }
 
         [Required]
-        public Guid UserId { get; set; }
+        public Guid UserID { get; set; }
 
-        public Guid? TaskId { get; set; }
+        public Guid? TaskID { get; set; }
 
-        public Guid? AppointmentId { get; set; }
+        public Guid? AppointmentID { get; set; }
 
-        [Required]
-        [MaxLength(20)]
-        public string ReminderType { get; set; } = "general"; // task, appointment, general
+        public string? ReminderType { get; set; } = "general";
 
-        [Required]
-        [MaxLength(255)]
-        public string Title { get; set; } = string.Empty;
+        public string? Title { get; set; }
 
-        [MaxLength(500)]
+
+        // NEW: Links to Meeting and Event
+        public Guid? MeetingID { get; set; }
+        public Guid? EventID { get; set; }
+
         public string? Message { get; set; }
 
         [Required]
@@ -33,21 +33,29 @@ namespace SphereScheduleAPI.Domain.Entities
 
         public bool NotifyViaPush { get; set; } = true;
 
-        [MaxLength(20)]
-        public string Status { get; set; } = "pending"; // pending, triggered, sent, failed, cancelled
+        public string? Status { get; set; } = "pending";
 
         public bool IsRecurring { get; set; } = false;
 
         public DateTimeOffset? SentAt { get; set; }
+        // REMOVED: CreatedAt, UpdatedAt, IsDeleted, DeletedAt (inherited from BaseEntity)
 
-        // Navigation properties
-        [ForeignKey("UserId")]
+        [ForeignKey("UserID")]
         public virtual User? User { get; set; }
 
-        [ForeignKey("TaskId")]
+        [ForeignKey("TaskID")]
         public virtual TaskEntity? Task { get; set; }
 
-        [ForeignKey("AppointmentId")]
+        [ForeignKey("AppointmentID")]
         public virtual Appointment? Appointment { get; set; }
+
+        [ForeignKey("MeetingID")]
+        public virtual Meeting? Meeting { get; set; }
+
+        [ForeignKey("EventID")]
+        public virtual Event? Event { get; set; }
+
+        // NEW navigation properties
+       
     }
 }

@@ -59,7 +59,7 @@
 
     public class UpcomingTaskDto
     {
-        public Guid TaskId { get; set; }
+        public Guid TaskID { get; set; }
         public string Title { get; set; } = string.Empty;
         public string Category { get; set; } = string.Empty;
         public string Priority { get; set; } = string.Empty;
@@ -73,7 +73,7 @@
 
     public class UpcomingAppointmentDto
     {
-        public Guid AppointmentId { get; set; }
+        public Guid AppointmentID { get; set; }
         public string Title { get; set; } = string.Empty;
         public string AppointmentType { get; set; } = string.Empty;
         public DateTimeOffset StartDateTime { get; set; }
@@ -89,12 +89,12 @@
 
     public class UpcomingReminderDto
     {
-        public Guid ReminderId { get; set; }
+        public Guid ReminderID { get; set; }
         public string Title { get; set; } = string.Empty;
         public string ReminderType { get; set; } = string.Empty;
         public DateTimeOffset ReminderDateTime { get; set; }
-        public Guid? TaskId { get; set; }
-        public Guid? AppointmentId { get; set; }
+        public Guid? TaskID { get; set; }
+        public Guid? AppointmentID { get; set; }
         public string? TaskTitle { get; set; }
         public string? AppointmentTitle { get; set; }
         public string TimeUntil { get; set; } = string.Empty;
@@ -110,7 +110,7 @@
 
     public class RecentTaskActivityDto
     {
-        public Guid TaskId { get; set; }
+        public Guid TaskID { get; set; }
         public string Title { get; set; } = string.Empty;
         public string Action { get; set; } = string.Empty; // created, completed, updated
         public DateTimeOffset Timestamp { get; set; }
@@ -119,7 +119,7 @@
 
     public class RecentAppointmentActivityDto
     {
-        public Guid AppointmentId { get; set; }
+        public Guid AppointmentID { get; set; }
         public string Title { get; set; } = string.Empty;
         public string Action { get; set; } = string.Empty; // created, completed, cancelled, updated
         public DateTimeOffset Timestamp { get; set; }

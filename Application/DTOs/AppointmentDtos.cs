@@ -4,8 +4,8 @@ namespace SphereScheduleAPI.Application.DTOs
 {
     public class AppointmentDto
     {
-        public Guid AppointmentId { get; set; }
-        public Guid UserId { get; set; }
+        public Guid AppointmentID { get; set; }
+        public Guid UserID { get; set; }
         public string Title { get; set; } = string.Empty;
         public string? Description { get; set; }
         public string AppointmentType { get; set; } = "general";
@@ -35,7 +35,7 @@ namespace SphereScheduleAPI.Application.DTOs
     public class CreateAppointmentDto
     {
         [Required]
-        public Guid UserId { get; set; }
+        public Guid UserID { get; set; }
 
         [Required]
         [MaxLength(255)]
@@ -102,9 +102,11 @@ namespace SphereScheduleAPI.Application.DTOs
         [RegularExpression("^(general|doctor|business|personal)$", ErrorMessage = "Invalid appointment type")]
         public string? AppointmentType { get; set; }
 
+        // FIXED: FutureDate validation only applies when value is provided
         [FutureDate(ErrorMessage = "StartDateTime must be in the future")]
         public DateTimeOffset? StartDateTime { get; set; }
 
+        // FIXED: DateAfter validation only applies when both values are provided
         [DateAfter("StartDateTime", ErrorMessage = "EndDateTime must be after StartDateTime")]
         public DateTimeOffset? EndDateTime { get; set; }
 
@@ -151,7 +153,7 @@ namespace SphereScheduleAPI.Application.DTOs
 
     public class AppointmentFilterDto
     {
-        public Guid? UserId { get; set; }
+        public Guid? UserID { get; set; }
         public string? AppointmentType { get; set; }
         public string? Status { get; set; }
         public DateTimeOffset? StartDateFrom { get; set; }
@@ -183,41 +185,15 @@ namespace SphereScheduleAPI.Application.DTOs
         public Dictionary<string, int> MonthlyTrend { get; set; } = new();
     }
 
-    // Custom validation attribute for date comparison
-    public class DateAfterAttribute : ValidationAttribute
-    {
-        private readonly string _comparisonProperty;
+    // ─────────────────────────────────────────────────────────────────────────
+    // FIXED: FutureDateAttribute - now skips validation when value is null
+    // This allows partial updates to work without requiring StartDateTime
+    // ─────────────────────────────────────────────────────────────────────────
+    
 
-        public DateAfterAttribute(string comparisonProperty)
-        {
-            _comparisonProperty = comparisonProperty;
-        }
-
-        protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
-        {
-            if (value == null)
-            {
-                return ValidationResult.Success;
-            }
-
-            var currentValue = (DateTimeOffset)value;
-            var property = validationContext.ObjectType.GetProperty(_comparisonProperty);
-
-            if (property == null)
-            {
-                return new ValidationResult($"Unknown property: {_comparisonProperty}");
-            }
-
-            var comparisonValue = property.GetValue(validationContext.ObjectInstance) as DateTimeOffset?;
-
-            if (!comparisonValue.HasValue)
-            {
-                return ValidationResult.Success;
-            }
-
-            return currentValue > comparisonValue.Value
-                ? ValidationResult.Success
-                : new ValidationResult(ErrorMessage ?? $"{validationContext.DisplayName} must be after {_comparisonProperty}");
-        }
-    }
+    // ─────────────────────────────────────────────────────────────────────────
+    // FIXED: DateAfterAttribute - now skips validation when either value is null
+    // This allows partial updates to work without requiring EndDateTime
+    // ─────────────────────────────────────────────────────────────────────────
+    
 }

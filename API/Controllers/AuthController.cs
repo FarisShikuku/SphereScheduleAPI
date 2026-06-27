@@ -140,13 +140,13 @@ namespace SphereScheduleAPI.API.Controllers
                     return Unauthorized(new { message = "No token provided" });
                 }
 
-                var userId = GetUserIdFromToken(token);
-                if (!userId.HasValue)
+                var UserID = GetUserIDFromToken(token);
+                if (!UserID.HasValue)
                 {
                     return Unauthorized(new { message = "Invalid token" });
                 }
 
-                var success = await _authService.ChangePasswordAsync(userId.Value, changePasswordDto);
+                var success = await _authService.ChangePasswordAsync(UserID.Value, changePasswordDto);
                 return Ok(new { message = "Password changed successfully" });
             }
             catch (UnauthorizedAccessException ex)
@@ -263,7 +263,7 @@ namespace SphereScheduleAPI.API.Controllers
             return authorizationHeader["Bearer ".Length..].Trim();
         }
 
-        private Guid? GetUserIdFromToken(string token)
+        private Guid? GetUserIDFromToken(string token)
         {
             // This should use your JWT service to extract user ID
             // For now, returning null - implement properly in real code

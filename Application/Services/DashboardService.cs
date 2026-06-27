@@ -24,19 +24,18 @@ namespace SphereScheduleAPI.Application.Services
             _logger = logger;
         }
 
-        public async Task<DashboardOverviewDto> GetDashboardOverviewAsync(Guid userId, DashboardFilterDto filterDto)
+        public async Task<DashboardOverviewDto> GetDashboardOverviewAsync(Guid UserID, DashboardFilterDto filterDto)
         {
             try
             {
                 var overview = new DashboardOverviewDto();
 
-                // Get all statistics in parallel for better performance
-                var taskStatsTask = GetTaskStatisticsAsync(userId, filterDto.StartDate, filterDto.EndDate);
-                var appointmentStatsTask = GetAppointmentStatisticsAsync(userId, filterDto.StartDate, filterDto.EndDate);
-                var productivityStatsTask = GetProductivityStatisticsAsync(userId, filterDto.StartDate, filterDto.EndDate);
-                var upcomingItemsTask = GetUpcomingItemsAsync(userId, filterDto.UpcomingDays);
-                var recentActivityTask = GetRecentActivityAsync(userId, filterDto.RecentItemsCount);
-                var userStatsTask = GetUserStatisticsAsync(userId);
+                var taskStatsTask = GetTaskStatisticsAsync(UserID, filterDto.StartDate, filterDto.EndDate);
+                var appointmentStatsTask = GetAppointmentStatisticsAsync(UserID, filterDto.StartDate, filterDto.EndDate);
+                var productivityStatsTask = GetProductivityStatisticsAsync(UserID, filterDto.StartDate, filterDto.EndDate);
+                var upcomingItemsTask = GetUpcomingItemsAsync(UserID, filterDto.UpcomingDays);
+                var recentActivityTask = GetRecentActivityAsync(UserID, filterDto.RecentItemsCount);
+                var userStatsTask = GetUserStatisticsAsync(UserID);
 
                 await Task.WhenAll(
                     taskStatsTask,
@@ -58,15 +57,16 @@ namespace SphereScheduleAPI.Application.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting dashboard overview for user {UserId}", userId);
+                _logger.LogError(ex, "Error getting dashboard overview for user {UserID}", UserID);
                 throw;
             }
         }
 
-        public async Task<TaskStatsDto> GetTaskStatisticsAsync(Guid userId, DateTimeOffset? startDate = null, DateTimeOffset? endDate = null)
+        public async Task<TaskStatsDto> GetTaskStatisticsAsync(Guid UserID, DateTimeOffset? startDate = null, DateTimeOffset? endDate = null)
         {
             var query = _context.Tasks
-                .Where(t => t.UserId == userId && !t.IsDeleted);
+                .Include(t => t.CategoryNavigation)
+                .Where(t => t.UserID == UserID && !t.IsDeleted);
 
             if (startDate != null)
             {
@@ -79,7 +79,7 @@ namespace SphereScheduleAPI.Application.Services
             }
 
             var tasks = await query.ToListAsync();
-            var today = DateTime.UtcNow.Date; // Changed to DateTime.UtcNow for Date comparison
+            var today = DateTime.UtcNow.Date;
 
             var stats = new TaskStatsDto
             {
@@ -93,12 +93,11 @@ namespace SphereScheduleAPI.Application.Services
                 CompletionRate = tasks.Any() ? (tasks.Count(t => t.Status == "completed") * 100.0) / tasks.Count : 0
             };
 
-            // Group by category
+            // Fixed: Group by category name using navigation property
             stats.TasksByCategory = tasks
-                .GroupBy(t => t.Category)
+                .GroupBy(t => t.CategoryNavigation != null ? t.CategoryNavigation.CategoryName : "Uncategorized")
                 .ToDictionary(g => g.Key, g => g.Count());
 
-            // Group by priority
             stats.TasksByPriority = tasks
                 .GroupBy(t => t.PriorityLevel)
                 .ToDictionary(g => g.Key, g => g.Count());
@@ -106,10 +105,10 @@ namespace SphereScheduleAPI.Application.Services
             return stats;
         }
 
-        public async Task<AppointmentStatsDto> GetAppointmentStatisticsAsync(Guid userId, DateTimeOffset? startDate = null, DateTimeOffset? endDate = null)
+        public async Task<AppointmentStatsDto> GetAppointmentStatisticsAsync(Guid UserID, DateTimeOffset? startDate = null, DateTimeOffset? endDate = null)
         {
             var query = _context.Appointments
-                .Where(a => a.UserId == userId && !a.IsDeleted);
+                .Where(a => a.UserID == UserID && !a.IsDeleted);
 
             if (startDate != null)
             {
@@ -137,7 +136,6 @@ namespace SphereScheduleAPI.Application.Services
                 InPersonAppointments = appointments.Count(a => !a.IsVirtual)
             };
 
-            // Group by type
             stats.AppointmentsByType = appointments
                 .GroupBy(a => a.AppointmentType)
                 .ToDictionary(g => g.Key, g => g.Count());
@@ -145,15 +143,14 @@ namespace SphereScheduleAPI.Application.Services
             return stats;
         }
 
-        public async Task<ProductivityStatsDto> GetProductivityStatisticsAsync(Guid userId, DateTimeOffset? startDate = null, DateTimeOffset? endDate = null)
+        public async Task<ProductivityStatsDto> GetProductivityStatisticsAsync(Guid UserID, DateTimeOffset? startDate = null, DateTimeOffset? endDate = null)
         {
-            var today = DateTime.UtcNow.Date; // Changed to DateTime
+            var today = DateTime.UtcNow.Date;
             var weekStart = today.AddDays(-(int)today.DayOfWeek);
             var monthStart = new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
-            // Get tasks for date range
             var taskQuery = _context.Tasks
-                .Where(t => t.UserId == userId && !t.IsDeleted);
+                .Where(t => t.UserID == UserID && !t.IsDeleted);
 
             if (startDate != null)
             {
@@ -175,11 +172,9 @@ namespace SphereScheduleAPI.Application.Services
                 AverageCompletionRate = tasks.Any() ? tasks.Average(t => t.CompletionPercentage) : 0
             };
 
-            // Calculate streak
-            stats.CurrentStreak = await CalculateCurrentStreakAsync(userId);
-            stats.BestStreak = await CalculateBestStreakAsync(userId);
+            stats.CurrentStreak = await CalculateCurrentStreakAsync(UserID);
+            stats.BestStreak = await CalculateBestStreakAsync(UserID);
 
-            // Weekly productivity (last 4 weeks)
             for (int i = 3; i >= 0; i--)
             {
                 var weekStartDate = today.AddDays(-(i * 7 + (int)today.DayOfWeek));
@@ -191,15 +186,16 @@ namespace SphereScheduleAPI.Application.Services
                     t.CompletedAt.Value.Date <= weekEndDate
                 ).ToList();
 
-                var weekProductivity = weekTasks.Any() ?
-                    (weekTasks.Count * 100.0) / tasks.Count(t =>
-                        t.CreatedAt.Date >= weekStartDate &&
-                        t.CreatedAt.Date <= weekEndDate) : 0;
+                var weekTotalTasks = tasks.Count(t =>
+                    t.CreatedAt.Date >= weekStartDate &&
+                    t.CreatedAt.Date <= weekEndDate);
+
+                var weekProductivity = weekTotalTasks > 0 && weekTasks.Any() ?
+                    (weekTasks.Count * 100.0) / weekTotalTasks : 0;
 
                 stats.WeeklyProductivity[$"Week {4 - i}"] = weekProductivity;
             }
 
-            // Daily completion trend (last 7 days)
             for (int i = 6; i >= 0; i--)
             {
                 var date = today.AddDays(-i);
@@ -214,16 +210,16 @@ namespace SphereScheduleAPI.Application.Services
             return stats;
         }
 
-        public async Task<UpcomingItemsDto> GetUpcomingItemsAsync(Guid userId, int daysAhead = 7)
+        public async Task<UpcomingItemsDto> GetUpcomingItemsAsync(Guid UserID, int daysAhead = 7)
         {
-            var today = DateTime.UtcNow.Date; // Changed to DateTime
+            var today = DateTime.UtcNow.Date;
             var endDate = today.AddDays(daysAhead);
 
             var upcomingItems = new UpcomingItemsDto();
 
-            // Get upcoming tasks
             var upcomingTasks = await _context.Tasks
-                .Where(t => t.UserId == userId &&
+                .Include(t => t.CategoryNavigation)
+                .Where(t => t.UserID == UserID &&
                            !t.IsDeleted &&
                            t.DueDate.HasValue &&
                            t.DueDate.Value.Date >= today &&
@@ -235,9 +231,9 @@ namespace SphereScheduleAPI.Application.Services
 
             upcomingItems.UpcomingTasks = upcomingTasks.Select(t => new UpcomingTaskDto
             {
-                TaskId = t.TaskId,
+                TaskID = t.TaskID,
                 Title = t.Title,
-                Category = t.Category,
+                Category = t.CategoryNavigation != null ? t.CategoryNavigation.CategoryName : "Uncategorized",
                 Priority = t.PriorityLevel,
                 DueDate = t.DueDate,
                 DueTime = t.DueTime,
@@ -247,9 +243,8 @@ namespace SphereScheduleAPI.Application.Services
                 DaysUntilDue = t.DueDate.HasValue ? (t.DueDate.Value.Date - today).Days : 0
             }).ToList();
 
-            // Get upcoming appointments
             var upcomingAppointments = await _context.Appointments
-                .Where(a => a.UserId == userId &&
+                .Where(a => a.UserID == UserID &&
                            !a.IsDeleted &&
                            a.StartDateTime >= DateTimeOffset.UtcNow &&
                            a.StartDateTime <= DateTimeOffset.UtcNow.AddDays(daysAhead) &&
@@ -260,7 +255,7 @@ namespace SphereScheduleAPI.Application.Services
 
             upcomingItems.UpcomingAppointments = upcomingAppointments.Select(a => new UpcomingAppointmentDto
             {
-                AppointmentId = a.AppointmentId,
+                AppointmentID = a.AppointmentID,
                 Title = a.Title,
                 AppointmentType = a.AppointmentType,
                 StartDateTime = a.StartDateTime,
@@ -269,16 +264,15 @@ namespace SphereScheduleAPI.Application.Services
                 IsVirtual = a.IsVirtual,
                 MeetingLink = a.MeetingLink,
                 Status = a.Status,
-                ParticipantCount = _context.Participants.Count(p => p.AppointmentId == a.AppointmentId),
-                HasReminders = _context.Reminders.Any(r => r.AppointmentId == a.AppointmentId && r.Status == "pending"),
+                ParticipantCount = _context.Participants.Count(p => p.AppointmentID == a.AppointmentID),
+                HasReminders = _context.Reminders.Any(r => r.AppointmentID == a.AppointmentID && r.Status == "pending"),
                 TimeUntil = GetTimeUntil(a.StartDateTime)
             }).ToList();
 
-            // Get upcoming reminders
             var upcomingReminders = await _context.Reminders
                 .Include(r => r.Task)
                 .Include(r => r.Appointment)
-                .Where(r => r.UserId == userId &&
+                .Where(r => r.UserID == UserID &&
                            r.Status == "pending" &&
                            r.ReminderDateTime >= DateTimeOffset.UtcNow &&
                            r.ReminderDateTime <= DateTimeOffset.UtcNow.AddDays(daysAhead))
@@ -288,12 +282,12 @@ namespace SphereScheduleAPI.Application.Services
 
             upcomingItems.UpcomingReminders = upcomingReminders.Select(r => new UpcomingReminderDto
             {
-                ReminderId = r.ReminderId,
+                ReminderID = r.ReminderID,
                 Title = r.Title,
                 ReminderType = r.ReminderType,
                 ReminderDateTime = r.ReminderDateTime,
-                TaskId = r.TaskId,
-                AppointmentId = r.AppointmentId,
+                TaskID = r.TaskID,
+                AppointmentID = r.AppointmentID,
                 TaskTitle = r.Task?.Title,
                 AppointmentTitle = r.Appointment?.Title,
                 TimeUntil = GetTimeUntil(r.ReminderDateTime)
@@ -302,46 +296,44 @@ namespace SphereScheduleAPI.Application.Services
             return upcomingItems;
         }
 
-        public async Task<RecentActivityForDashboardDto> GetRecentActivityAsync(Guid userId, int count = 10)
+        public async Task<RecentActivityForDashboardDto> GetRecentActivityAsync(Guid UserID, int count = 10)
         {
             var recentActivity = new RecentActivityForDashboardDto();
             var today = DateTimeOffset.UtcNow.Date;
 
-            // Get recent task activities
             var recentTasks = await _context.Tasks
-                .Where(t => t.UserId == userId && !t.IsDeleted)
+                .Include(t => t.CategoryNavigation)
+                .Where(t => t.UserID == UserID && !t.IsDeleted)
                 .OrderByDescending(t => t.UpdatedAt)
                 .Take(count)
                 .ToListAsync();
 
             recentActivity.RecentTasks = recentTasks.Select(t => new RecentTaskActivityDto
             {
-                TaskId = t.TaskId,
+                TaskID = t.TaskID,
                 Title = t.Title,
                 Action = GetTaskAction(t),
                 Timestamp = t.UpdatedAt,
-                Category = t.Category
+                Category = t.CategoryNavigation != null ? t.CategoryNavigation.CategoryName : "Uncategorized"
             }).ToList();
 
-            // Get recent appointment activities
             var recentAppointments = await _context.Appointments
-                .Where(a => a.UserId == userId && !a.IsDeleted)
+                .Where(a => a.UserID == UserID && !a.IsDeleted)
                 .OrderByDescending(a => a.UpdatedAt)
                 .Take(count)
                 .ToListAsync();
 
             recentActivity.RecentAppointments = recentAppointments.Select(a => new RecentAppointmentActivityDto
             {
-                AppointmentId = a.AppointmentId,
+                AppointmentID = a.AppointmentID,
                 Title = a.Title,
                 Action = GetAppointmentAction(a),
                 Timestamp = a.UpdatedAt,
                 AppointmentType = a.AppointmentType
             }).ToList();
 
-            // Get recent user activities from activity logs
             var recentUserActivities = await _context.ActivityLogs
-                .Where(al => al.UserId == userId)
+                .Where(al => al.UserID == UserID)
                 .OrderByDescending(al => al.CreatedAt)
                 .Take(count)
                 .ToListAsync();
@@ -355,37 +347,35 @@ namespace SphereScheduleAPI.Application.Services
                 EntityId = al.EntityId
             }).ToList();
 
-            // Count total activities today
             recentActivity.TotalActivitiesToday = await _context.ActivityLogs
-                .CountAsync(al => al.UserId == userId && al.CreatedAt.Date == today);
+                .CountAsync(al => al.UserID == UserID && al.CreatedAt.Date == today);
 
             return recentActivity;
         }
 
-        public async Task<UserStatsDto> GetUserStatisticsAsync(Guid userId)
+        public async Task<UserStatsDto> GetUserStatisticsAsync(Guid UserID)
         {
             var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.UserId == userId);
+                .FirstOrDefaultAsync(u => u.UserID == UserID);
 
             if (user == null)
             {
-                throw new KeyNotFoundException($"User with ID {userId} not found");
+                throw new KeyNotFoundException($"User with ID {UserID} not found");
             }
 
             var stats = new UserStatsDto
             {
-                TotalCategories = await _context.Categories.CountAsync(c => c.UserId == userId && !c.IsDeleted),
-                TotalReminders = await _context.Reminders.CountAsync(r => r.UserId == userId),
-                ActiveReminders = await _context.Reminders.CountAsync(r => r.UserId == userId && r.Status == "pending"),
-                TotalParticipants = await _context.Participants.CountAsync(p => p.Appointment.UserId == userId),
-                DaysSinceRegistration = (int)(DateTimeOffset.UtcNow - user.CreatedAt).TotalDays, // Fixed: CreatedAt is non-nullable
+                TotalCategories = await _context.Categories.CountAsync(c => c.UserID == UserID && !c.IsDeleted),
+                TotalReminders = await _context.Reminders.CountAsync(r => r.UserID == UserID),
+                ActiveReminders = await _context.Reminders.CountAsync(r => r.UserID == UserID && r.Status == "pending"),
+                TotalParticipants = await _context.Participants.CountAsync(p => p.Appointment.UserID == UserID),
+                DaysSinceRegistration = (int)(DateTimeOffset.UtcNow - user.CreatedAt).TotalDays,
                 LastLogin = user.LastLoginAt,
                 LastActivity = user.LastActivityAt
             };
 
-            // Calculate average daily tasks
             var tasks = await _context.Tasks
-                .Where(t => t.UserId == userId && !t.IsDeleted)
+                .Where(t => t.UserID == UserID && !t.IsDeleted)
                 .ToListAsync();
 
             if (tasks.Any())
@@ -394,7 +384,6 @@ namespace SphereScheduleAPI.Application.Services
                 stats.AverageDailyTasks = tasks.Count / daysActive;
             }
 
-            // Find peak productivity hour
             var completedTasks = tasks.Where(t => t.CompletedAt.HasValue).ToList();
             if (completedTasks.Any())
             {
@@ -409,7 +398,7 @@ namespace SphereScheduleAPI.Application.Services
             return stats;
         }
 
-        public async Task<ProductivityReportDto> GetProductivityReportAsync(Guid userId, DateTimeOffset startDate, DateTimeOffset endDate)
+        public async Task<ProductivityReportDto> GetProductivityReportAsync(Guid UserID, DateTimeOffset startDate, DateTimeOffset endDate)
         {
             var report = new ProductivityReportDto
             {
@@ -417,9 +406,9 @@ namespace SphereScheduleAPI.Application.Services
                 PeriodEnd = endDate
             };
 
-            // Get tasks for the period
             var tasks = await _context.Tasks
-                .Where(t => t.UserId == userId &&
+                .Include(t => t.CategoryNavigation)
+                .Where(t => t.UserID == UserID &&
                            !t.IsDeleted &&
                            t.CreatedAt >= startDate &&
                            t.CreatedAt <= endDate)
@@ -431,9 +420,8 @@ namespace SphereScheduleAPI.Application.Services
             report.TotalTasksCompleted = completedTasks.Count;
             report.CompletionPercentage = tasks.Any() ? (completedTasks.Count * 100.0) / tasks.Count : 0;
 
-            // Get appointments for the period
             var appointments = await _context.Appointments
-                .Where(a => a.UserId == userId &&
+                .Where(a => a.UserID == UserID &&
                            !a.IsDeleted &&
                            a.StartDateTime >= startDate &&
                            a.StartDateTime <= endDate)
@@ -444,22 +432,19 @@ namespace SphereScheduleAPI.Application.Services
             report.AppointmentCompletionRate = appointments.Any() ?
                 (appointments.Count(a => a.Status == "completed") * 100.0) / appointments.Count : 0;
 
-            // Calculate total time spent
             report.TotalTimeSpentMinutes = completedTasks.Sum(t => t.ActualDurationMinutes ?? 0) +
                                           appointments.Where(a => a.Status == "completed")
                                                      .Sum(a => (int)(a.EndDateTime - a.StartDateTime).TotalMinutes);
 
-            // Category distribution
+            // Fixed: Use category name from navigation
             report.CategoryDistribution = tasks
-                .GroupBy(t => t.Category)
+                .GroupBy(t => t.CategoryNavigation != null ? t.CategoryNavigation.CategoryName : "Uncategorized")
                 .ToDictionary(g => g.Key, g => g.Count());
 
-            // Priority distribution
             report.PriorityDistribution = tasks
                 .GroupBy(t => t.PriorityLevel)
                 .ToDictionary(g => g.Key, g => g.Count());
 
-            // Daily productivity
             var days = Enumerable.Range(0, (int)(endDate - startDate).TotalDays + 1)
                 .Select(offset => startDate.AddDays(offset).Date);
 
@@ -472,14 +457,12 @@ namespace SphereScheduleAPI.Application.Services
                 report.DailyProductivity[day.ToString("MMM dd")] = productivity;
             }
 
-            // Top performing days
             report.TopPerformingDays = report.DailyProductivity
                 .OrderByDescending(kv => kv.Value)
                 .Take(3)
                 .Select(kv => kv.Key)
                 .ToList();
 
-            // Most productive hour
             var hourProductivity = completedTasks
                 .Where(t => t.CompletedAt.HasValue)
                 .GroupBy(t => t.CompletedAt!.Value.Hour)
@@ -489,12 +472,10 @@ namespace SphereScheduleAPI.Application.Services
             report.MostProductiveHour = hourProductivity != null ?
                 $"{hourProductivity.Key}:00 - {hourProductivity.Key + 1}:00" : "N/A";
 
-            // Most common category
             report.MostCommonCategory = report.CategoryDistribution
                 .OrderByDescending(kv => kv.Value)
                 .FirstOrDefault().Key ?? "N/A";
 
-            // Most common priority
             report.MostCommonPriority = report.PriorityDistribution
                 .OrderByDescending(kv => kv.Value)
                 .FirstOrDefault().Key ?? "N/A";
@@ -502,31 +483,30 @@ namespace SphereScheduleAPI.Application.Services
             return report;
         }
 
-        public async Task<TimeUsageDto> GetTimeUsageStatisticsAsync(Guid userId, DateTimeOffset? startDate = null, DateTimeOffset? endDate = null)
+        public async Task<TimeUsageDto> GetTimeUsageStatisticsAsync(Guid UserID, DateTimeOffset? startDate = null, DateTimeOffset? endDate = null)
         {
             var timeUsage = new TimeUsageDto();
 
-            // Get completed tasks with duration
             var completedTasks = await _context.Tasks
-                .Where(t => t.UserId == userId &&
+                .Include(t => t.CategoryNavigation)
+                .Where(t => t.UserID == UserID &&
                            !t.IsDeleted &&
                            t.Status == "completed" &&
                            t.ActualDurationMinutes.HasValue)
                 .ToListAsync();
 
-            // Get completed appointments with duration
             var completedAppointments = await _context.Appointments
-                .Where(a => a.UserId == userId &&
+                .Where(a => a.UserID == UserID &&
                            !a.IsDeleted &&
                            a.Status == "completed")
                 .ToListAsync();
 
-            // Calculate time by category
             foreach (var task in completedTasks)
             {
                 var duration = task.ActualDurationMinutes ?? 0;
+                var categoryName = task.CategoryNavigation != null ? task.CategoryNavigation.CategoryName.ToLower() : "other";
 
-                switch (task.Category.ToLower())
+                switch (categoryName)
                 {
                     case "work":
                     case "job":
@@ -543,15 +523,14 @@ namespace SphereScheduleAPI.Application.Services
                         break;
                 }
 
-                // Add to category dictionary
-                if (!timeUsage.TimeByCategory.ContainsKey(task.Category))
+                var displayCategory = task.CategoryNavigation != null ? task.CategoryNavigation.CategoryName : "Other";
+                if (!timeUsage.TimeByCategory.ContainsKey(displayCategory))
                 {
-                    timeUsage.TimeByCategory[task.Category] = 0;
+                    timeUsage.TimeByCategory[displayCategory] = 0;
                 }
-                timeUsage.TimeByCategory[task.Category] += duration;
+                timeUsage.TimeByCategory[displayCategory] += duration;
             }
 
-            // Add appointment time (mostly work/business)
             var appointmentMinutes = completedAppointments
                 .Sum(a => (int)(a.EndDateTime - a.StartDateTime).TotalMinutes);
 
@@ -561,7 +540,6 @@ namespace SphereScheduleAPI.Application.Services
                 timeUsage.TimeByCategory["Appointments"] = appointmentMinutes;
             }
 
-            // Calculate totals and percentages
             timeUsage.TotalTrackedMinutes = timeUsage.WorkMinutes + timeUsage.PersonalMinutes +
                                            timeUsage.HealthMinutes + timeUsage.OtherMinutes;
 
@@ -573,7 +551,6 @@ namespace SphereScheduleAPI.Application.Services
                 timeUsage.PercentageByCategory["Other"] = (timeUsage.OtherMinutes * 100.0) / timeUsage.TotalTrackedMinutes;
             }
 
-            // Calculate averages
             timeUsage.AverageTaskDuration = completedTasks.Any() ?
                 completedTasks.Average(t => t.ActualDurationMinutes ?? 0) : 0;
 
@@ -583,68 +560,60 @@ namespace SphereScheduleAPI.Application.Services
             return timeUsage;
         }
 
-        public async Task<NotificationSummaryDto> GetNotificationSummaryAsync(Guid userId)
+        public async Task<NotificationSummaryDto> GetNotificationSummaryAsync(Guid UserID)
         {
             var summary = new NotificationSummaryDto();
 
-            // Get unread/pending reminders
             summary.UnreadReminders = await _context.Reminders
-                .CountAsync(r => r.UserId == userId && r.Status == "pending");
+                .CountAsync(r => r.UserID == UserID && r.Status == "pending");
 
-            // Get user email for invitation checks
-            var userEmail = await GetUserEmailAsync(userId);
+            var userEmail = await GetUserEmailAsync(UserID);
 
-            // Get pending invitations (participants with pending status)
             summary.PendingInvitations = await _context.Participants
-                .CountAsync(p => (p.UserId == userId || p.Email == userEmail) &&
+                .CountAsync(p => (p.UserID == UserID || p.Email == userEmail) &&
                                 p.InvitationStatus == "pending");
 
-            // Get upcoming deadlines (tasks due today or tomorrow)
-            var today = DateTime.UtcNow.Date; // Changed to DateTime
+            var today = DateTime.UtcNow.Date;
             summary.UpcomingDeadlines = await _context.Tasks
-                .CountAsync(t => t.UserId == userId &&
+                .CountAsync(t => t.UserID == UserID &&
                                 !t.IsDeleted &&
                                 t.Status != "completed" &&
                                 t.DueDate.HasValue &&
                                 t.DueDate.Value.Date >= today &&
                                 t.DueDate.Value.Date <= today.AddDays(1));
 
-            // Get overdue items
             summary.OverdueItems = await _context.Tasks
-                .CountAsync(t => t.UserId == userId &&
+                .CountAsync(t => t.UserID == UserID &&
                                 !t.IsDeleted &&
                                 t.Status != "completed" &&
                                 t.DueDate.HasValue &&
                                 t.DueDate.Value.Date < today);
 
-            // Get recent notifications
             var recentNotifications = new List<NotificationItemDto>();
 
-            // Add recent reminders
             var recentReminders = await _context.Reminders
                 .Include(r => r.Task)
                 .Include(r => r.Appointment)
-                .Where(r => r.UserId == userId && r.Status == "pending")
+                .Where(r => r.UserID == UserID && r.Status == "pending")
                 .OrderByDescending(r => r.ReminderDateTime)
                 .Take(5)
                 .ToListAsync();
 
             recentNotifications.AddRange(recentReminders.Select(r => new NotificationItemDto
             {
-                Id = r.ReminderId,
+                Id = r.ReminderID,
                 Type = "reminder",
                 Title = r.Title,
                 Message = $"Reminder: {r.Message}",
                 Timestamp = r.ReminderDateTime,
                 IsRead = false,
-                EntityId = r.TaskId ?? r.AppointmentId,
-                EntityType = r.TaskId.HasValue ? "task" : "appointment"
+                EntityId = r.TaskID ?? r.AppointmentID,
+                EntityType = r.TaskID.HasValue ? "task" : "appointment"
             }));
 
-            // Add pending invitations
             var pendingInvites = await _context.Participants
                 .Include(p => p.Appointment)
-                .Where(p => (p.UserId == userId || p.Email == userEmail) &&
+                .Where(p => (p.UserID == UserID || p.Email == userEmail) &&
                            p.InvitationStatus == "pending")
                 .OrderByDescending(p => p.CreatedAt)
                 .Take(5)
@@ -652,13 +621,13 @@ namespace SphereScheduleAPI.Application.Services
 
             recentNotifications.AddRange(pendingInvites.Select(p => new NotificationItemDto
             {
-                Id = p.ParticipantId,
+                Id = p.ParticipantID,
                 Type = "invitation",
                 Title = $"Invitation: {p.Appointment?.Title}",
                 Message = $"You've been invited to {p.Appointment?.Title}",
                 Timestamp = p.CreatedAt,
                 IsRead = false,
-                EntityId = p.AppointmentId,
+                EntityId = p.AppointmentID,
                 EntityType = "appointment"
             }));
 
@@ -670,67 +639,65 @@ namespace SphereScheduleAPI.Application.Services
             return summary;
         }
 
-        public async Task<Dictionary<string, object>> GetQuickStatsAsync(Guid userId)
+        public async Task<Dictionary<string, object>> GetQuickStatsAsync(Guid UserID)
         {
-            var today = DateTime.UtcNow.Date; // Changed to DateTime
+            var today = DateTime.UtcNow.Date;
 
             var quickStats = new Dictionary<string, object>();
 
-            // Task quick stats
-            quickStats["totalTasks"] = await _context.Tasks.CountAsync(t => t.UserId == userId && !t.IsDeleted);
+            quickStats["totalTasks"] = await _context.Tasks.CountAsync(t => t.UserID == UserID && !t.IsDeleted);
             quickStats["completedTasksToday"] = await _context.Tasks.CountAsync(t =>
-                t.UserId == userId &&
+                t.UserID == UserID &&
                 !t.IsDeleted &&
                 t.Status == "completed" &&
                 t.CompletedAt.HasValue &&
                 t.CompletedAt.Value.Date == DateTime.UtcNow.Date);
 
             quickStats["pendingTasks"] = await _context.Tasks.CountAsync(t =>
-                t.UserId == userId &&
+                t.UserID == UserID &&
                 !t.IsDeleted &&
                 t.Status == "pending");
 
             quickStats["overdueTasks"] = await _context.Tasks.CountAsync(t =>
-                t.UserId == userId &&
+                t.UserID == UserID &&
                 !t.IsDeleted &&
                 t.Status != "completed" &&
                 t.DueDate.HasValue &&
                 t.DueDate.Value.Date < today);
 
-            // Appointment quick stats
             quickStats["todayAppointments"] = await _context.Appointments.CountAsync(a =>
-                a.UserId == userId &&
+                a.UserID == UserID &&
                 !a.IsDeleted &&
                 a.StartDateTime.Date == DateTimeOffset.UtcNow.Date &&
                 a.Status == "scheduled");
 
             quickStats["upcomingAppointments"] = await _context.Appointments.CountAsync(a =>
-                a.UserId == userId &&
+                a.UserID == UserID &&
                 !a.IsDeleted &&
                 a.StartDateTime > DateTimeOffset.UtcNow &&
                 a.Status == "scheduled");
 
-            // Reminder quick stats
             quickStats["activeReminders"] = await _context.Reminders.CountAsync(r =>
-                r.UserId == userId &&
+                r.UserID == UserID &&
                 r.Status == "pending");
 
-            // Category quick stats
             quickStats["totalCategories"] = await _context.Categories.CountAsync(c =>
-                c.UserId == userId &&
+                c.UserID == UserID &&
                 !c.IsDeleted);
 
             return quickStats;
         }
 
-        public async Task<IEnumerable<object>> GetCategoryBreakdownAsync(Guid userId)
+        public async Task<IEnumerable<object>> GetCategoryBreakdownAsync(Guid UserID)
         {
             var tasks = await _context.Tasks
-                .Where(t => t.UserId == userId && !t.IsDeleted)
+                .Include(t => t.CategoryNavigation)
+                .Where(t => t.UserID == UserID && !t.IsDeleted)
                 .ToListAsync();
 
+            // Fixed: Use category name from navigation
             var breakdown = tasks
-                .GroupBy(t => t.Category)
+                .GroupBy(t => t.CategoryNavigation != null ? t.CategoryNavigation.CategoryName : "Uncategorized")
                 .Select(g => new
                 {
                     Category = g.Key,
@@ -746,10 +713,10 @@ namespace SphereScheduleAPI.Application.Services
             return breakdown;
         }
 
-        public async Task<IEnumerable<object>> GetPriorityBreakdownAsync(Guid userId)
+        public async Task<IEnumerable<object>> GetPriorityBreakdownAsync(Guid UserID)
         {
             var tasks = await _context.Tasks
-                .Where(t => t.UserId == userId && !t.IsDeleted)
+                .Where(t => t.UserID == UserID && !t.IsDeleted)
                 .ToListAsync();
 
             var breakdown = tasks
@@ -776,13 +743,13 @@ namespace SphereScheduleAPI.Application.Services
             return breakdown;
         }
 
-        public async Task<IEnumerable<object>> GetMonthlyTrendAsync(Guid userId, int months = 6)
+        public async Task<IEnumerable<object>> GetMonthlyTrendAsync(Guid UserID, int months = 6)
         {
-            var endDate = DateTime.UtcNow.Date; // Changed to DateTime
+            var endDate = DateTime.UtcNow.Date;
             var startDate = endDate.AddMonths(-months);
 
             var tasks = await _context.Tasks
-                .Where(t => t.UserId == userId &&
+                .Where(t => t.UserID == UserID &&
                            !t.IsDeleted &&
                            t.CreatedAt >= startDate)
                 .ToListAsync();
@@ -814,17 +781,16 @@ namespace SphereScheduleAPI.Application.Services
             return monthlyTrend;
         }
 
-        private async Task<int> CalculateCurrentStreakAsync(Guid userId)
+        private async Task<int> CalculateCurrentStreakAsync(Guid UserID)
         {
-            var today = DateTime.UtcNow.Date; // Changed to DateTime
+            var today = DateTime.UtcNow.Date;
             var streak = 0;
 
-            // Check consecutive days with completed tasks
-            for (int i = 0; i < 365; i++) // Check up to a year
+            for (int i = 0; i < 365; i++)
             {
                 var date = today.AddDays(-i);
                 var hasCompletedTask = await _context.Tasks
-                    .AnyAsync(t => t.UserId == userId &&
+                    .AnyAsync(t => t.UserID == UserID &&
                                   !t.IsDeleted &&
                                   t.Status == "completed" &&
                                   t.CompletedAt.HasValue &&
@@ -843,10 +809,10 @@ namespace SphereScheduleAPI.Application.Services
             return streak;
         }
 
-        private async Task<int> CalculateBestStreakAsync(Guid userId)
+        private async Task<int> CalculateBestStreakAsync(Guid UserID)
         {
             var completedTasks = await _context.Tasks
-                .Where(t => t.UserId == userId &&
+                .Where(t => t.UserID == UserID &&
                            !t.IsDeleted &&
                            t.Status == "completed" &&
                            t.CompletedAt.HasValue)
@@ -917,7 +883,7 @@ namespace SphereScheduleAPI.Application.Services
         {
             if (task.Status == "completed")
                 return "completed";
-            if (task.UpdatedAt > task.CreatedAt.AddMinutes(5)) // Significant update
+            if (task.UpdatedAt > task.CreatedAt.AddMinutes(5))
                 return "updated";
 
             return "created";
@@ -935,10 +901,10 @@ namespace SphereScheduleAPI.Application.Services
             return "created";
         }
 
-        private async Task<string?> GetUserEmailAsync(Guid userId)
+        private async Task<string?> GetUserEmailAsync(Guid UserID)
         {
             return await _context.Users
-                .Where(u => u.UserId == userId)
+                .Where(u => u.UserID == UserID)
                 .Select(u => u.Email)
                 .FirstOrDefaultAsync();
         }

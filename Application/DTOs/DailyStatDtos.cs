@@ -6,7 +6,7 @@ namespace SphereScheduleAPI.Application.DTOs
     public class DailyStatDto
     {
         public Guid StatId { get; set; }
-        public Guid UserId { get; set; }
+        public Guid UserID { get; set; }
         public DateTime StatDate { get; set; }
         public int TotalTasks { get; set; }
         public int CompletedTasks { get; set; }

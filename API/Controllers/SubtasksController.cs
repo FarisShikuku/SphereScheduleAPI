@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace SphereScheduleAPI.API.Controllers
 {
-    [Route("api/tasks/{taskId}/[controller]")]
+    [Route("api/tasks/{TaskID}/[controller]")]
     [ApiController]
     [Authorize]
     public class SubtasksController : ControllerBase
@@ -30,32 +30,32 @@ namespace SphereScheduleAPI.API.Controllers
             _mapper = mapper;
         }
 
-        private Guid GetCurrentUserId()
+        private Guid GetCurrentUserID()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            var UserIDClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(UserIDClaim) || !Guid.TryParse(UserIDClaim, out var UserID))
             {
                 throw new UnauthorizedAccessException("Invalid user ID in token");
             }
-            return userId;
+            return UserID;
         }
 
-        // GET: api/tasks/{taskId}/subtasks
+        // GET: api/tasks/{TaskID}/subtasks
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<SubtaskDto>>> GetSubtasks(Guid taskId)
+        public async Task<ActionResult<IEnumerable<SubtaskDto>>> GetSubtasks(Guid TaskID)
         {
             try
             {
                 // Verify task exists and belongs to user
-                var task = await _taskService.GetTaskByIdAsync(taskId);
+                var task = await _taskService.GetTaskByIdAsync(TaskID);
                 if (task == null)
-                    return NotFound(new { message = $"Task with ID {taskId} not found" });
+                    return NotFound(new { message = $"Task with ID {TaskID} not found" });
 
-                var userId = GetCurrentUserId();
-                if (task.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (task.UserID != UserID)
                     return Forbid();
 
-                var subtasks = await _subtaskService.GetTaskSubtasksAsync(taskId);
+                var subtasks = await _subtaskService.GetTaskSubtasksAsync(TaskID);
                 return Ok(_mapper.Map<IEnumerable<SubtaskDto>>(subtasks));
             }
             catch (Exception ex)
@@ -64,24 +64,24 @@ namespace SphereScheduleAPI.API.Controllers
             }
         }
 
-        // GET: api/tasks/{taskId}/subtasks/{id}
+        // GET: api/tasks/{TaskID}/subtasks/{id}
         [HttpGet("{id}")]
-        public async Task<ActionResult<SubtaskDto>> GetSubtask(Guid taskId, Guid id)
+        public async Task<ActionResult<SubtaskDto>> GetSubtask(Guid TaskID, Guid id)
         {
             try
             {
                 // Verify task exists and belongs to user
-                var task = await _taskService.GetTaskByIdAsync(taskId);
+                var task = await _taskService.GetTaskByIdAsync(TaskID);
                 if (task == null)
-                    return NotFound(new { message = $"Task with ID {taskId} not found" });
+                    return NotFound(new { message = $"Task with ID {TaskID} not found" });
 
-                var userId = GetCurrentUserId();
-                if (task.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (task.UserID != UserID)
                     return Forbid();
 
                 // Verify subtask belongs to task
-                if (!await _subtaskService.SubtaskBelongsToTaskAsync(id, taskId))
-                    return NotFound(new { message = $"Subtask with ID {id} not found in task {taskId}" });
+                if (!await _subtaskService.SubtaskBelongsToTaskAsync(id, TaskID))
+                    return NotFound(new { message = $"Subtask with ID {id} not found in task {TaskID}" });
 
                 var subtask = await _subtaskService.GetSubtaskByIdAsync(id);
                 if (subtask == null)
@@ -95,28 +95,28 @@ namespace SphereScheduleAPI.API.Controllers
             }
         }
 
-        // POST: api/tasks/{taskId}/subtasks
+        // POST: api/tasks/{TaskID}/subtasks
         [HttpPost]
-        public async Task<ActionResult<SubtaskDto>> CreateSubtask(Guid taskId, [FromBody] CreateSubtaskDto createDto)
+        public async Task<ActionResult<SubtaskDto>> CreateSubtask(Guid TaskID, [FromBody] CreateSubtaskDto createDto)
         {
             try
             {
                 // Verify task exists and belongs to user
-                var task = await _taskService.GetTaskByIdAsync(taskId);
+                var task = await _taskService.GetTaskByIdAsync(TaskID);
                 if (task == null)
-                    return NotFound(new { message = $"Task with ID {taskId} not found" });
+                    return NotFound(new { message = $"Task with ID {TaskID} not found" });
 
-                var userId = GetCurrentUserId();
-                if (task.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (task.UserID != UserID)
                     return Forbid();
 
                 // Map DTO to entity
                 var subtask = _mapper.Map<Subtask>(createDto);
-                subtask.TaskId = taskId;
+                subtask.TaskID = TaskID;
 
                 var created = await _subtaskService.CreateSubtaskAsync(subtask);
                 return CreatedAtAction(nameof(GetSubtask),
-                    new { taskId, id = created.SubtaskId },
+                    new { TaskID, id = created.SubTaskID },
                     _mapper.Map<SubtaskDto>(created));
             }
             catch (KeyNotFoundException ex)
@@ -129,19 +129,19 @@ namespace SphereScheduleAPI.API.Controllers
             }
         }
 
-        // PUT: api/tasks/{taskId}/subtasks/{id}
+        // PUT: api/tasks/{TaskID}/subtasks/{id}
         [HttpPut("{id}")]
-        public async Task<ActionResult<SubtaskDto>> UpdateSubtask(Guid taskId, Guid id, [FromBody] UpdateSubtaskDto updateDto)
+        public async Task<ActionResult<SubtaskDto>> UpdateSubtask(Guid TaskID, Guid id, [FromBody] UpdateSubtaskDto updateDto)
         {
             try
             {
                 // Verify task exists and belongs to user
-                var task = await _taskService.GetTaskByIdAsync(taskId);
+                var task = await _taskService.GetTaskByIdAsync(TaskID);
                 if (task == null)
-                    return NotFound(new { message = $"Task with ID {taskId} not found" });
+                    return NotFound(new { message = $"Task with ID {TaskID} not found" });
 
-                var userId = GetCurrentUserId();
-                if (task.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (task.UserID != UserID)
                     return Forbid();
 
                 // Verify subtask exists and belongs to task
@@ -149,8 +149,8 @@ namespace SphereScheduleAPI.API.Controllers
                 if (existing == null)
                     return NotFound(new { message = $"Subtask with ID {id} not found" });
 
-                if (existing.TaskId != taskId)
-                    return BadRequest(new { message = $"Subtask does not belong to task {taskId}" });
+                if (existing.TaskID != TaskID)
+                    return BadRequest(new { message = $"Subtask does not belong to task {TaskID}" });
 
                 // Map updates
                 _mapper.Map(updateDto, existing);
@@ -165,19 +165,19 @@ namespace SphereScheduleAPI.API.Controllers
             }
         }
 
-        // DELETE: api/tasks/{taskId}/subtasks/{id}
+        // DELETE: api/tasks/{TaskID}/subtasks/{id}
         [HttpDelete("{id}")]
-        public async Task<ActionResult> DeleteSubtask(Guid taskId, Guid id)
+        public async Task<ActionResult> DeleteSubtask(Guid TaskID, Guid id)
         {
             try
             {
                 // Verify task exists and belongs to user
-                var task = await _taskService.GetTaskByIdAsync(taskId);
+                var task = await _taskService.GetTaskByIdAsync(TaskID);
                 if (task == null)
-                    return NotFound(new { message = $"Task with ID {taskId} not found" });
+                    return NotFound(new { message = $"Task with ID {TaskID} not found" });
 
-                var userId = GetCurrentUserId();
-                if (task.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (task.UserID != UserID)
                     return Forbid();
 
                 // Verify subtask exists and belongs to task
@@ -185,8 +185,8 @@ namespace SphereScheduleAPI.API.Controllers
                 if (existing == null)
                     return NotFound(new { message = $"Subtask with ID {id} not found" });
 
-                if (existing.TaskId != taskId)
-                    return BadRequest(new { message = $"Subtask does not belong to task {taskId}" });
+                if (existing.TaskID != TaskID)
+                    return BadRequest(new { message = $"Subtask does not belong to task {TaskID}" });
 
                 var success = await _subtaskService.DeleteSubtaskAsync(id);
                 if (!success)
@@ -200,22 +200,22 @@ namespace SphereScheduleAPI.API.Controllers
             }
         }
 
-        // GET: api/tasks/{taskId}/subtasks/status/{status}
+        // GET: api/tasks/{TaskID}/subtasks/status/{status}
         [HttpGet("status/{status}")]
-        public async Task<ActionResult<IEnumerable<SubtaskDto>>> GetSubtasksByStatus(Guid taskId, string status)
+        public async Task<ActionResult<IEnumerable<SubtaskDto>>> GetSubtasksByStatus(Guid TaskID, string status)
         {
             try
             {
                 // Verify task exists and belongs to user
-                var task = await _taskService.GetTaskByIdAsync(taskId);
+                var task = await _taskService.GetTaskByIdAsync(TaskID);
                 if (task == null)
-                    return NotFound(new { message = $"Task with ID {taskId} not found" });
+                    return NotFound(new { message = $"Task with ID {TaskID} not found" });
 
-                var userId = GetCurrentUserId();
-                if (task.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (task.UserID != UserID)
                     return Forbid();
 
-                var subtasks = await _subtaskService.GetSubtasksByStatusAsync(taskId, status);
+                var subtasks = await _subtaskService.GetSubtasksByStatusAsync(TaskID, status);
                 return Ok(_mapper.Map<IEnumerable<SubtaskDto>>(subtasks));
             }
             catch (Exception ex)
@@ -224,22 +224,22 @@ namespace SphereScheduleAPI.API.Controllers
             }
         }
 
-        // GET: api/tasks/{taskId}/subtasks/priority/{priority}
+        // GET: api/tasks/{TaskID}/subtasks/priority/{priority}
         [HttpGet("priority/{priority}")]
-        public async Task<ActionResult<IEnumerable<SubtaskDto>>> GetSubtasksByPriority(Guid taskId, string priority)
+        public async Task<ActionResult<IEnumerable<SubtaskDto>>> GetSubtasksByPriority(Guid TaskID, string priority)
         {
             try
             {
                 // Verify task exists and belongs to user
-                var task = await _taskService.GetTaskByIdAsync(taskId);
+                var task = await _taskService.GetTaskByIdAsync(TaskID);
                 if (task == null)
-                    return NotFound(new { message = $"Task with ID {taskId} not found" });
+                    return NotFound(new { message = $"Task with ID {TaskID} not found" });
 
-                var userId = GetCurrentUserId();
-                if (task.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (task.UserID != UserID)
                     return Forbid();
 
-                var subtasks = await _subtaskService.GetSubtasksByPriorityAsync(taskId, priority);
+                var subtasks = await _subtaskService.GetSubtasksByPriorityAsync(TaskID, priority);
                 return Ok(_mapper.Map<IEnumerable<SubtaskDto>>(subtasks));
             }
             catch (Exception ex)
@@ -248,22 +248,22 @@ namespace SphereScheduleAPI.API.Controllers
             }
         }
 
-        // GET: api/tasks/{taskId}/subtasks/overdue
+        // GET: api/tasks/{TaskID}/subtasks/overdue
         [HttpGet("overdue")]
-        public async Task<ActionResult<IEnumerable<SubtaskDto>>> GetOverdueSubtasks(Guid taskId)
+        public async Task<ActionResult<IEnumerable<SubtaskDto>>> GetOverdueSubtasks(Guid TaskID)
         {
             try
             {
                 // Verify task exists and belongs to user
-                var task = await _taskService.GetTaskByIdAsync(taskId);
+                var task = await _taskService.GetTaskByIdAsync(TaskID);
                 if (task == null)
-                    return NotFound(new { message = $"Task with ID {taskId} not found" });
+                    return NotFound(new { message = $"Task with ID {TaskID} not found" });
 
-                var userId = GetCurrentUserId();
-                if (task.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (task.UserID != UserID)
                     return Forbid();
 
-                var subtasks = await _subtaskService.GetOverdueSubtasksAsync(taskId);
+                var subtasks = await _subtaskService.GetOverdueSubtasksAsync(TaskID);
                 return Ok(_mapper.Map<IEnumerable<SubtaskDto>>(subtasks));
             }
             catch (Exception ex)
@@ -272,22 +272,22 @@ namespace SphereScheduleAPI.API.Controllers
             }
         }
 
-        // GET: api/tasks/{taskId}/subtasks/today
+        // GET: api/tasks/{TaskID}/subtasks/today
         [HttpGet("today")]
-        public async Task<ActionResult<IEnumerable<SubtaskDto>>> GetTodaySubtasks(Guid taskId)
+        public async Task<ActionResult<IEnumerable<SubtaskDto>>> GetTodaySubtasks(Guid TaskID)
         {
             try
             {
                 // Verify task exists and belongs to user
-                var task = await _taskService.GetTaskByIdAsync(taskId);
+                var task = await _taskService.GetTaskByIdAsync(TaskID);
                 if (task == null)
-                    return NotFound(new { message = $"Task with ID {taskId} not found" });
+                    return NotFound(new { message = $"Task with ID {TaskID} not found" });
 
-                var userId = GetCurrentUserId();
-                if (task.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (task.UserID != UserID)
                     return Forbid();
 
-                var subtasks = await _subtaskService.GetTodaySubtasksAsync(taskId);
+                var subtasks = await _subtaskService.GetTodaySubtasksAsync(TaskID);
                 return Ok(_mapper.Map<IEnumerable<SubtaskDto>>(subtasks));
             }
             catch (Exception ex)
@@ -296,25 +296,25 @@ namespace SphereScheduleAPI.API.Controllers
             }
         }
 
-        // GET: api/tasks/{taskId}/subtasks/completed
+        // GET: api/tasks/{TaskID}/subtasks/completed
         [HttpGet("completed")]
         public async Task<ActionResult<IEnumerable<SubtaskDto>>> GetCompletedSubtasks(
-            Guid taskId,
+            Guid TaskID,
             [FromQuery] DateTime? startDate = null,
             [FromQuery] DateTime? endDate = null)
         {
             try
             {
                 // Verify task exists and belongs to user
-                var task = await _taskService.GetTaskByIdAsync(taskId);
+                var task = await _taskService.GetTaskByIdAsync(TaskID);
                 if (task == null)
-                    return NotFound(new { message = $"Task with ID {taskId} not found" });
+                    return NotFound(new { message = $"Task with ID {TaskID} not found" });
 
-                var userId = GetCurrentUserId();
-                if (task.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (task.UserID != UserID)
                     return Forbid();
 
-                var subtasks = await _subtaskService.GetCompletedSubtasksAsync(taskId, startDate, endDate);
+                var subtasks = await _subtaskService.GetCompletedSubtasksAsync(TaskID, startDate, endDate);
                 return Ok(_mapper.Map<IEnumerable<SubtaskDto>>(subtasks));
             }
             catch (Exception ex)
@@ -323,24 +323,24 @@ namespace SphereScheduleAPI.API.Controllers
             }
         }
 
-        // POST: api/tasks/{taskId}/subtasks/{id}/status
+        // POST: api/tasks/{TaskID}/subtasks/{id}/status
         [HttpPost("{id}/status")]
-        public async Task<ActionResult> ChangeSubtaskStatus(Guid taskId, Guid id, [FromBody] ChangeSubtaskStatusDto statusDto)
+        public async Task<ActionResult> ChangeSubtaskStatus(Guid TaskID, Guid id, [FromBody] ChangeSubtaskStatusDto statusDto)
         {
             try
             {
                 // Verify task exists and belongs to user
-                var task = await _taskService.GetTaskByIdAsync(taskId);
+                var task = await _taskService.GetTaskByIdAsync(TaskID);
                 if (task == null)
-                    return NotFound(new { message = $"Task with ID {taskId} not found" });
+                    return NotFound(new { message = $"Task with ID {TaskID} not found" });
 
-                var userId = GetCurrentUserId();
-                if (task.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (task.UserID != UserID)
                     return Forbid();
 
                 // Verify subtask exists and belongs to task
-                if (!await _subtaskService.SubtaskBelongsToTaskAsync(id, taskId))
-                    return NotFound(new { message = $"Subtask with ID {id} not found in task {taskId}" });
+                if (!await _subtaskService.SubtaskBelongsToTaskAsync(id, TaskID))
+                    return NotFound(new { message = $"Subtask with ID {id} not found in task {TaskID}" });
 
                 var success = await _subtaskService.ChangeSubtaskStatusAsync(id, statusDto.NewStatus);
                 if (!success)
@@ -354,24 +354,24 @@ namespace SphereScheduleAPI.API.Controllers
             }
         }
 
-        // POST: api/tasks/{taskId}/subtasks/{id}/complete
+        // POST: api/tasks/{TaskID}/subtasks/{id}/complete
         [HttpPost("{id}/complete")]
-        public async Task<ActionResult> CompleteSubtask(Guid taskId, Guid id)
+        public async Task<ActionResult> CompleteSubtask(Guid TaskID, Guid id)
         {
             try
             {
                 // Verify task exists and belongs to user
-                var task = await _taskService.GetTaskByIdAsync(taskId);
+                var task = await _taskService.GetTaskByIdAsync(TaskID);
                 if (task == null)
-                    return NotFound(new { message = $"Task with ID {taskId} not found" });
+                    return NotFound(new { message = $"Task with ID {TaskID} not found" });
 
-                var userId = GetCurrentUserId();
-                if (task.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (task.UserID != UserID)
                     return Forbid();
 
                 // Verify subtask exists and belongs to task
-                if (!await _subtaskService.SubtaskBelongsToTaskAsync(id, taskId))
-                    return NotFound(new { message = $"Subtask with ID {id} not found in task {taskId}" });
+                if (!await _subtaskService.SubtaskBelongsToTaskAsync(id, TaskID))
+                    return NotFound(new { message = $"Subtask with ID {id} not found in task {TaskID}" });
 
                 var success = await _subtaskService.CompleteSubtaskAsync(id);
                 if (!success)
@@ -385,24 +385,24 @@ namespace SphereScheduleAPI.API.Controllers
             }
         }
 
-        // POST: api/tasks/{taskId}/subtasks/{id}/priority
+        // POST: api/tasks/{TaskID}/subtasks/{id}/priority
         [HttpPost("{id}/priority")]
-        public async Task<ActionResult> UpdateSubtaskPriority(Guid taskId, Guid id, [FromBody] ChangeSubtaskPriorityDto priorityDto)
+        public async Task<ActionResult> UpdateSubtaskPriority(Guid TaskID, Guid id, [FromBody] ChangeSubtaskPriorityDto priorityDto)
         {
             try
             {
                 // Verify task exists and belongs to user
-                var task = await _taskService.GetTaskByIdAsync(taskId);
+                var task = await _taskService.GetTaskByIdAsync(TaskID);
                 if (task == null)
-                    return NotFound(new { message = $"Task with ID {taskId} not found" });
+                    return NotFound(new { message = $"Task with ID {TaskID} not found" });
 
-                var userId = GetCurrentUserId();
-                if (task.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (task.UserID != UserID)
                     return Forbid();
 
                 // Verify subtask exists and belongs to task
-                if (!await _subtaskService.SubtaskBelongsToTaskAsync(id, taskId))
-                    return NotFound(new { message = $"Subtask with ID {id} not found in task {taskId}" });
+                if (!await _subtaskService.SubtaskBelongsToTaskAsync(id, TaskID))
+                    return NotFound(new { message = $"Subtask with ID {id} not found in task {TaskID}" });
 
                 var success = await _subtaskService.UpdateSubtaskPriorityAsync(id, priorityDto.NewPriority);
                 if (!success)
@@ -416,24 +416,24 @@ namespace SphereScheduleAPI.API.Controllers
             }
         }
 
-        // POST: api/tasks/{taskId}/subtasks/{id}/order
+        // POST: api/tasks/{TaskID}/subtasks/{id}/order
         [HttpPost("{id}/order")]
-        public async Task<ActionResult> UpdateSubtaskOrder(Guid taskId, Guid id, [FromBody] UpdateSubtaskOrderDto orderDto)
+        public async Task<ActionResult> UpdateSubtaskOrder(Guid TaskID, Guid id, [FromBody] UpdateSubtaskOrderDto orderDto)
         {
             try
             {
                 // Verify task exists and belongs to user
-                var task = await _taskService.GetTaskByIdAsync(taskId);
+                var task = await _taskService.GetTaskByIdAsync(TaskID);
                 if (task == null)
-                    return NotFound(new { message = $"Task with ID {taskId} not found" });
+                    return NotFound(new { message = $"Task with ID {TaskID} not found" });
 
-                var userId = GetCurrentUserId();
-                if (task.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (task.UserID != UserID)
                     return Forbid();
 
                 // Verify subtask exists and belongs to task
-                if (!await _subtaskService.SubtaskBelongsToTaskAsync(id, taskId))
-                    return NotFound(new { message = $"Subtask with ID {id} not found in task {taskId}" });
+                if (!await _subtaskService.SubtaskBelongsToTaskAsync(id, TaskID))
+                    return NotFound(new { message = $"Subtask with ID {id} not found in task {TaskID}" });
 
                 var success = await _subtaskService.UpdateSubtaskOrderAsync(id, orderDto.NewOrder);
                 if (!success)
@@ -447,22 +447,22 @@ namespace SphereScheduleAPI.API.Controllers
             }
         }
 
-        // POST: api/tasks/{taskId}/subtasks/reorder
+        // POST: api/tasks/{TaskID}/subtasks/reorder
         [HttpPost("reorder")]
-        public async Task<ActionResult> ReorderSubtasks(Guid taskId, [FromBody] ReorderSubtasksDto reorderDto)
+        public async Task<ActionResult> ReorderSubtasks(Guid TaskID, [FromBody] ReorderSubtasksDto reorderDto)
         {
             try
             {
                 // Verify task exists and belongs to user
-                var task = await _taskService.GetTaskByIdAsync(taskId);
+                var task = await _taskService.GetTaskByIdAsync(TaskID);
                 if (task == null)
-                    return NotFound(new { message = $"Task with ID {taskId} not found" });
+                    return NotFound(new { message = $"Task with ID {TaskID} not found" });
 
-                var userId = GetCurrentUserId();
-                if (task.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (task.UserID != UserID)
                     return Forbid();
 
-                var success = await _subtaskService.ReorderSubtasksAsync(taskId, reorderDto.SubtaskOrders);
+                var success = await _subtaskService.ReorderSubtasksAsync(TaskID, reorderDto.SubtaskOrders);
                 if (!success)
                     return StatusCode(500, new { message = "Failed to reorder subtasks" });
 
@@ -474,24 +474,24 @@ namespace SphereScheduleAPI.API.Controllers
             }
         }
 
-        // POST: api/tasks/{taskId}/subtasks/{id}/due-date
+        // POST: api/tasks/{TaskID}/subtasks/{id}/due-date
         [HttpPost("{id}/due-date")]
-        public async Task<ActionResult> UpdateSubtaskDueDate(Guid taskId, Guid id, [FromBody] UpdateSubtaskDueDateDto dueDateDto)
+        public async Task<ActionResult> UpdateSubtaskDueDate(Guid TaskID, Guid id, [FromBody] UpdateSubtaskDueDateDto dueDateDto)
         {
             try
             {
                 // Verify task exists and belongs to user
-                var task = await _taskService.GetTaskByIdAsync(taskId);
+                var task = await _taskService.GetTaskByIdAsync(TaskID);
                 if (task == null)
-                    return NotFound(new { message = $"Task with ID {taskId} not found" });
+                    return NotFound(new { message = $"Task with ID {TaskID} not found" });
 
-                var userId = GetCurrentUserId();
-                if (task.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (task.UserID != UserID)
                     return Forbid();
 
                 // Verify subtask exists and belongs to task
-                if (!await _subtaskService.SubtaskBelongsToTaskAsync(id, taskId))
-                    return NotFound(new { message = $"Subtask with ID {id} not found in task {taskId}" });
+                if (!await _subtaskService.SubtaskBelongsToTaskAsync(id, TaskID))
+                    return NotFound(new { message = $"Subtask with ID {id} not found in task {TaskID}" });
 
                 var success = await _subtaskService.UpdateSubtaskDueDateAsync(id, dueDateDto.DueDate, dueDateDto.DueTime);
                 if (!success)
@@ -505,24 +505,24 @@ namespace SphereScheduleAPI.API.Controllers
             }
         }
 
-        // GET: api/tasks/{taskId}/subtasks/statistics
+        // GET: api/tasks/{TaskID}/subtasks/statistics
         [HttpGet("statistics")]
-        public async Task<ActionResult<SubtaskStatisticsDto>> GetSubtaskStatistics(Guid taskId)
+        public async Task<ActionResult<SubtaskStatisticsDto>> GetSubtaskStatistics(Guid TaskID)
         {
             try
             {
                 // Verify task exists and belongs to user
-                var task = await _taskService.GetTaskByIdAsync(taskId);
+                var task = await _taskService.GetTaskByIdAsync(TaskID);
                 if (task == null)
-                    return NotFound(new { message = $"Task with ID {taskId} not found" });
+                    return NotFound(new { message = $"Task with ID {TaskID} not found" });
 
-                var userId = GetCurrentUserId();
-                if (task.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (task.UserID != UserID)
                     return Forbid();
 
-                var stats = await _subtaskService.GetSubtaskStatisticsAsync(taskId);
-                var completionRate = await _subtaskService.GetSubtaskCompletionRateAsync(taskId);
-                var avgCompletionTime = await _subtaskService.GetAverageCompletionTimeAsync(taskId);
+                var stats = await _subtaskService.GetSubtaskStatisticsAsync(TaskID);
+                var completionRate = await _subtaskService.GetSubtaskCompletionRateAsync(TaskID);
+                var avgCompletionTime = await _subtaskService.GetAverageCompletionTimeAsync(TaskID);
 
                 var statistics = new SubtaskStatisticsDto
                 {
@@ -551,19 +551,19 @@ namespace SphereScheduleAPI.API.Controllers
             }
         }
 
-        // POST: api/tasks/{taskId}/subtasks/bulk
+        // POST: api/tasks/{TaskID}/subtasks/bulk
         [HttpPost("bulk")]
-        public async Task<ActionResult> CreateMultipleSubtasks(Guid taskId, [FromBody] CreateMultipleSubtasksDto bulkDto)
+        public async Task<ActionResult> CreateMultipleSubtasks(Guid TaskID, [FromBody] CreateMultipleSubtasksDto bulkDto)
         {
             try
             {
                 // Verify task exists and belongs to user
-                var task = await _taskService.GetTaskByIdAsync(taskId);
+                var task = await _taskService.GetTaskByIdAsync(TaskID);
                 if (task == null)
-                    return NotFound(new { message = $"Task with ID {taskId} not found" });
+                    return NotFound(new { message = $"Task with ID {TaskID} not found" });
 
-                var userId = GetCurrentUserId();
-                if (task.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (task.UserID != UserID)
                     return Forbid();
 
                 if (bulkDto.Subtasks == null || !bulkDto.Subtasks.Any())
@@ -572,7 +572,7 @@ namespace SphereScheduleAPI.API.Controllers
                 // Map DTOs to entities
                 var subtasks = _mapper.Map<List<Subtask>>(bulkDto.Subtasks);
 
-                var success = await _subtaskService.CreateMultipleSubtasksAsync(taskId, subtasks);
+                var success = await _subtaskService.CreateMultipleSubtasksAsync(TaskID, subtasks);
                 if (!success)
                     return StatusCode(500, new { message = "Failed to create multiple subtasks" });
 
@@ -584,36 +584,36 @@ namespace SphereScheduleAPI.API.Controllers
             }
         }
 
-        // POST: api/tasks/{taskId}/subtasks/bulk/delete
+        // POST: api/tasks/{TaskID}/subtasks/bulk/delete
         [HttpPost("bulk/delete")]
-        public async Task<ActionResult> DeleteMultipleSubtasks(Guid taskId, [FromBody] BulkSubtaskActionDto bulkDto)
+        public async Task<ActionResult> DeleteMultipleSubtasks(Guid TaskID, [FromBody] BulkSubtaskActionDto bulkDto)
         {
             try
             {
                 // Verify task exists and belongs to user
-                var task = await _taskService.GetTaskByIdAsync(taskId);
+                var task = await _taskService.GetTaskByIdAsync(TaskID);
                 if (task == null)
-                    return NotFound(new { message = $"Task with ID {taskId} not found" });
+                    return NotFound(new { message = $"Task with ID {TaskID} not found" });
 
-                var userId = GetCurrentUserId();
-                if (task.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (task.UserID != UserID)
                     return Forbid();
 
-                if (bulkDto.SubtaskIds == null || bulkDto.SubtaskIds.Length == 0)
+                if (bulkDto.SubTaskIDs == null || bulkDto.SubTaskIDs.Length == 0)
                     return BadRequest(new { message = "No subtask IDs provided" });
 
                 // Verify all subtasks belong to this task
-                var subtasks = await _subtaskService.GetTaskSubtasksAsync(taskId);
-                var taskSubtaskIds = subtasks.Select(s => s.SubtaskId).ToHashSet();
+                var subtasks = await _subtaskService.GetTaskSubtasksAsync(TaskID);
+                var taskSubTaskIDs = subtasks.Select(s => s.SubTaskID).ToHashSet();
 
-                if (bulkDto.SubtaskIds.Any(id => !taskSubtaskIds.Contains(id)))
+                if (bulkDto.SubTaskIDs.Any(id => !taskSubTaskIDs.Contains(id)))
                     return BadRequest(new { message = "One or more subtasks do not belong to this task" });
 
-                var success = await _subtaskService.DeleteMultipleSubtasksAsync(bulkDto.SubtaskIds);
+                var success = await _subtaskService.DeleteMultipleSubtasksAsync(bulkDto.SubTaskIDs);
                 if (!success)
                     return StatusCode(500, new { message = "Failed to delete multiple subtasks" });
 
-                return Ok(new { message = "Subtasks deleted successfully", count = bulkDto.SubtaskIds.Length });
+                return Ok(new { message = "Subtasks deleted successfully", count = bulkDto.SubTaskIDs.Length });
             }
             catch (Exception ex)
             {
@@ -621,36 +621,36 @@ namespace SphereScheduleAPI.API.Controllers
             }
         }
 
-        // POST: api/tasks/{taskId}/subtasks/bulk/complete
+        // POST: api/tasks/{TaskID}/subtasks/bulk/complete
         [HttpPost("bulk/complete")]
-        public async Task<ActionResult> CompleteMultipleSubtasks(Guid taskId, [FromBody] BulkSubtaskActionDto bulkDto)
+        public async Task<ActionResult> CompleteMultipleSubtasks(Guid TaskID, [FromBody] BulkSubtaskActionDto bulkDto)
         {
             try
             {
                 // Verify task exists and belongs to user
-                var task = await _taskService.GetTaskByIdAsync(taskId);
+                var task = await _taskService.GetTaskByIdAsync(TaskID);
                 if (task == null)
-                    return NotFound(new { message = $"Task with ID {taskId} not found" });
+                    return NotFound(new { message = $"Task with ID {TaskID} not found" });
 
-                var userId = GetCurrentUserId();
-                if (task.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (task.UserID != UserID)
                     return Forbid();
 
-                if (bulkDto.SubtaskIds == null || bulkDto.SubtaskIds.Length == 0)
+                if (bulkDto.SubTaskIDs == null || bulkDto.SubTaskIDs.Length == 0)
                     return BadRequest(new { message = "No subtask IDs provided" });
 
                 // Verify all subtasks belong to this task
-                var subtasks = await _subtaskService.GetTaskSubtasksAsync(taskId);
-                var taskSubtaskIds = subtasks.Select(s => s.SubtaskId).ToHashSet();
+                var subtasks = await _subtaskService.GetTaskSubtasksAsync(TaskID);
+                var taskSubTaskIDs = subtasks.Select(s => s.SubTaskID).ToHashSet();
 
-                if (bulkDto.SubtaskIds.Any(id => !taskSubtaskIds.Contains(id)))
+                if (bulkDto.SubTaskIDs.Any(id => !taskSubTaskIDs.Contains(id)))
                     return BadRequest(new { message = "One or more subtasks do not belong to this task" });
 
-                var success = await _subtaskService.CompleteMultipleSubtasksAsync(bulkDto.SubtaskIds);
+                var success = await _subtaskService.CompleteMultipleSubtasksAsync(bulkDto.SubTaskIDs);
                 if (!success)
                     return StatusCode(500, new { message = "Failed to complete multiple subtasks" });
 
-                return Ok(new { message = "Subtasks completed successfully", count = bulkDto.SubtaskIds.Length });
+                return Ok(new { message = "Subtasks completed successfully", count = bulkDto.SubTaskIDs.Length });
             }
             catch (Exception ex)
             {
@@ -658,34 +658,34 @@ namespace SphereScheduleAPI.API.Controllers
             }
         }
 
-        // POST: api/tasks/{taskId}/subtasks/{id}/move
+        // POST: api/tasks/{TaskID}/subtasks/{id}/move
         [HttpPost("{id}/move")]
-        public async Task<ActionResult> MoveSubtask(Guid taskId, Guid id, [FromBody] MoveSubtaskDto moveDto)
+        public async Task<ActionResult> MoveSubtask(Guid TaskID, Guid id, [FromBody] MoveSubtaskDto moveDto)
         {
             try
             {
                 // Verify source task exists and belongs to user
-                var sourceTask = await _taskService.GetTaskByIdAsync(taskId);
+                var sourceTask = await _taskService.GetTaskByIdAsync(TaskID);
                 if (sourceTask == null)
-                    return NotFound(new { message = $"Source task with ID {taskId} not found" });
+                    return NotFound(new { message = $"Source task with ID {TaskID} not found" });
 
-                var userId = GetCurrentUserId();
-                if (sourceTask.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (sourceTask.UserID != UserID)
                     return Forbid();
 
                 // Verify destination task exists and belongs to user
-                var destTask = await _taskService.GetTaskByIdAsync(moveDto.NewTaskId);
+                var destTask = await _taskService.GetTaskByIdAsync(moveDto.NewTaskID);
                 if (destTask == null)
-                    return NotFound(new { message = $"Destination task with ID {moveDto.NewTaskId} not found" });
+                    return NotFound(new { message = $"Destination task with ID {moveDto.NewTaskID} not found" });
 
-                if (destTask.UserId != userId)
+                if (destTask.UserID != UserID)
                     return Forbid();
 
                 // Verify subtask exists and belongs to source task
-                if (!await _subtaskService.SubtaskBelongsToTaskAsync(id, taskId))
-                    return NotFound(new { message = $"Subtask with ID {id} not found in task {taskId}" });
+                if (!await _subtaskService.SubtaskBelongsToTaskAsync(id, TaskID))
+                    return NotFound(new { message = $"Subtask with ID {id} not found in task {TaskID}" });
 
-                var success = await _subtaskService.MoveSubtaskToTaskAsync(id, moveDto.NewTaskId);
+                var success = await _subtaskService.MoveSubtaskToTaskAsync(id, moveDto.NewTaskID);
                 if (!success)
                     return StatusCode(500, new { message = "Failed to move subtask" });
 
@@ -697,39 +697,39 @@ namespace SphereScheduleAPI.API.Controllers
             }
         }
 
-        // POST: api/tasks/{taskId}/subtasks/{id}/copy
+        // POST: api/tasks/{TaskID}/subtasks/{id}/copy
         [HttpPost("{id}/copy")]
-        public async Task<ActionResult<SubtaskDto>> CopySubtask(Guid taskId, Guid id, [FromBody] MoveSubtaskDto copyDto)
+        public async Task<ActionResult<SubtaskDto>> CopySubtask(Guid TaskID, Guid id, [FromBody] MoveSubtaskDto copyDto)
         {
             try
             {
                 // Verify source task exists and belongs to user
-                var sourceTask = await _taskService.GetTaskByIdAsync(taskId);
+                var sourceTask = await _taskService.GetTaskByIdAsync(TaskID);
                 if (sourceTask == null)
-                    return NotFound(new { message = $"Source task with ID {taskId} not found" });
+                    return NotFound(new { message = $"Source task with ID {TaskID} not found" });
 
-                var userId = GetCurrentUserId();
-                if (sourceTask.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (sourceTask.UserID != UserID)
                     return Forbid();
 
                 // Verify destination task exists and belongs to user
-                var destTask = await _taskService.GetTaskByIdAsync(copyDto.NewTaskId);
+                var destTask = await _taskService.GetTaskByIdAsync(copyDto.NewTaskID);
                 if (destTask == null)
-                    return NotFound(new { message = $"Destination task with ID {copyDto.NewTaskId} not found" });
+                    return NotFound(new { message = $"Destination task with ID {copyDto.NewTaskID} not found" });
 
-                if (destTask.UserId != userId)
+                if (destTask.UserID != UserID)
                     return Forbid();
 
                 // Verify subtask exists and belongs to source task
-                if (!await _subtaskService.SubtaskBelongsToTaskAsync(id, taskId))
-                    return NotFound(new { message = $"Subtask with ID {id} not found in task {taskId}" });
+                if (!await _subtaskService.SubtaskBelongsToTaskAsync(id, TaskID))
+                    return NotFound(new { message = $"Subtask with ID {id} not found in task {TaskID}" });
 
-                var success = await _subtaskService.CopySubtaskToTaskAsync(id, copyDto.NewTaskId);
+                var success = await _subtaskService.CopySubtaskToTaskAsync(id, copyDto.NewTaskID);
                 if (!success)
                     return StatusCode(500, new { message = "Failed to copy subtask" });
 
                 // Get the copied subtask (it will be the last one in the destination task)
-                var destSubtasks = await _subtaskService.GetTaskSubtasksAsync(copyDto.NewTaskId);
+                var destSubtasks = await _subtaskService.GetTaskSubtasksAsync(copyDto.NewTaskID);
                 var copiedSubtask = destSubtasks.LastOrDefault();
 
                 if (copiedSubtask == null)
@@ -743,25 +743,25 @@ namespace SphereScheduleAPI.API.Controllers
             }
         }
 
-        // GET: api/tasks/{taskId}/subtasks/search
+        // GET: api/tasks/{TaskID}/subtasks/search
         [HttpGet("search")]
-        public async Task<ActionResult<IEnumerable<SubtaskDto>>> SearchSubtasks(Guid taskId, [FromQuery] string term)
+        public async Task<ActionResult<IEnumerable<SubtaskDto>>> SearchSubtasks(Guid TaskID, [FromQuery] string term)
         {
             try
             {
                 // Verify task exists and belongs to user
-                var task = await _taskService.GetTaskByIdAsync(taskId);
+                var task = await _taskService.GetTaskByIdAsync(TaskID);
                 if (task == null)
-                    return NotFound(new { message = $"Task with ID {taskId} not found" });
+                    return NotFound(new { message = $"Task with ID {TaskID} not found" });
 
-                var userId = GetCurrentUserId();
-                if (task.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (task.UserID != UserID)
                     return Forbid();
 
                 if (string.IsNullOrWhiteSpace(term))
                     return BadRequest(new { message = "Search term is required" });
 
-                var subtasks = await _subtaskService.SearchSubtasksAsync(taskId, term);
+                var subtasks = await _subtaskService.SearchSubtasksAsync(TaskID, term);
                 return Ok(_mapper.Map<IEnumerable<SubtaskDto>>(subtasks));
             }
             catch (Exception ex)
@@ -770,22 +770,22 @@ namespace SphereScheduleAPI.API.Controllers
             }
         }
 
-        // GET: api/tasks/{taskId}/subtasks/filter
+        // GET: api/tasks/{TaskID}/subtasks/filter
         [HttpGet("filter")]
-        public async Task<ActionResult<IEnumerable<SubtaskDto>>> FilterSubtasks(Guid taskId, [FromQuery] SubtaskFilterDto filter)
+        public async Task<ActionResult<IEnumerable<SubtaskDto>>> FilterSubtasks(Guid TaskID, [FromQuery] SubtaskFilterDto filter)
         {
             try
             {
                 // Verify task exists and belongs to user
-                var task = await _taskService.GetTaskByIdAsync(taskId);
+                var task = await _taskService.GetTaskByIdAsync(TaskID);
                 if (task == null)
-                    return NotFound(new { message = $"Task with ID {taskId} not found" });
+                    return NotFound(new { message = $"Task with ID {TaskID} not found" });
 
-                var userId = GetCurrentUserId();
-                if (task.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (task.UserID != UserID)
                     return Forbid();
 
-                var subtasks = await _subtaskService.FilterSubtasksAsync(taskId, filter);
+                var subtasks = await _subtaskService.FilterSubtasksAsync(TaskID, filter);
                 return Ok(_mapper.Map<IEnumerable<SubtaskDto>>(subtasks));
             }
             catch (Exception ex)

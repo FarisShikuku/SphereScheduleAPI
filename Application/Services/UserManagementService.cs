@@ -22,10 +22,10 @@ namespace SphereScheduleAPI.Application.Services
             _passwordService = passwordService;
         }
 
-        public async Task<User> GetUserByIdAsync(Guid userId)
+        public async Task<User> GetUserByIdAsync(Guid UserID)
         {
             return await _context.Users
-                .FirstOrDefaultAsync(u => u.UserId == userId && !u.IsDeleted);
+                .FirstOrDefaultAsync(u => u.UserID == UserID && !u.IsDeleted);
         }
 
         public async Task<User> GetUserByEmailAsync(string email)
@@ -63,7 +63,7 @@ namespace SphereScheduleAPI.Application.Services
             if (!string.IsNullOrEmpty(user.Username) && await UserExistsByUsernameAsync(user.Username))
                 throw new InvalidOperationException($"User with username {user.Username} already exists");
 
-            user.UserId = Guid.NewGuid();
+            user.UserID = Guid.NewGuid();
             user.CreatedAt = DateTimeOffset.UtcNow;
             user.UpdatedAt = DateTimeOffset.UtcNow;
             user.IsActive = true;
@@ -78,9 +78,9 @@ namespace SphereScheduleAPI.Application.Services
 
         public async Task<User> UpdateUserAsync(User user)
         {
-            var existing = await GetUserByIdAsync(user.UserId);
+            var existing = await GetUserByIdAsync(user.UserID);
             if (existing == null)
-                throw new KeyNotFoundException($"User with ID {user.UserId} not found");
+                throw new KeyNotFoundException($"User with ID {user.UserID} not found");
 
             // Check if email is being changed and if it's available
             if (existing.Email != user.Email && await UserExistsByEmailAsync(user.Email))
@@ -96,9 +96,9 @@ namespace SphereScheduleAPI.Application.Services
             return user;
         }
 
-        public async Task<bool> DeleteUserAsync(Guid userId, bool permanent = false)
+        public async Task<bool> DeleteUserAsync(Guid UserID, bool permanent = false)
         {
-            var user = await GetUserByIdAsync(userId);
+            var user = await GetUserByIdAsync(UserID);
             if (user == null) return false;
 
             if (permanent)
@@ -117,10 +117,10 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<bool> RestoreUserAsync(Guid userId)
+        public async Task<bool> RestoreUserAsync(Guid UserID)
         {
             var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.UserId == userId && u.IsDeleted);
+                .FirstOrDefaultAsync(u => u.UserID == UserID && u.IsDeleted);
 
             if (user == null) return false;
 
@@ -144,9 +144,9 @@ namespace SphereScheduleAPI.Application.Services
             return _passwordService.VerifyPassword(password, user.PasswordHash, user.PasswordSalt);
         }
 
-        public async Task<bool> ChangePasswordAsync(Guid userId, string currentPassword, string newPassword)
+        public async Task<bool> ChangePasswordAsync(Guid UserID, string currentPassword, string newPassword)
         {
-            var user = await GetUserByIdAsync(userId);
+            var user = await GetUserByIdAsync(UserID);
             if (user == null) return false;
 
             if (!_passwordService.VerifyPassword(currentPassword, user.PasswordHash, user.PasswordSalt))
@@ -175,9 +175,9 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<bool> VerifyEmailAsync(Guid userId)
+        public async Task<bool> VerifyEmailAsync(Guid UserID)
         {
-            var user = await GetUserByIdAsync(userId);
+            var user = await GetUserByIdAsync(UserID);
             if (user == null) return false;
 
             user.EmailVerified = true;
@@ -187,9 +187,9 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<bool> UpdateLastLoginAsync(Guid userId)
+        public async Task<bool> UpdateLastLoginAsync(Guid UserID)
         {
-            var user = await GetUserByIdAsync(userId);
+            var user = await GetUserByIdAsync(UserID);
             if (user == null) return false;
 
             user.LastLoginAt = DateTimeOffset.UtcNow;
@@ -200,9 +200,9 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<bool> UpdateLastActivityAsync(Guid userId)
+        public async Task<bool> UpdateLastActivityAsync(Guid UserID)
         {
-            var user = await GetUserByIdAsync(userId);
+            var user = await GetUserByIdAsync(UserID);
             if (user == null) return false;
 
             user.LastActivityAt = DateTimeOffset.UtcNow;
@@ -212,9 +212,9 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<bool> LockUserAccountAsync(Guid userId, DateTimeOffset? lockoutEnd = null)
+        public async Task<bool> LockUserAccountAsync(Guid UserID, DateTimeOffset? lockoutEnd = null)
         {
-            var user = await GetUserByIdAsync(userId);
+            var user = await GetUserByIdAsync(UserID);
             if (user == null) return false;
 
             user.LockoutEnabled = true;
@@ -225,9 +225,9 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<bool> UnlockUserAccountAsync(Guid userId)
+        public async Task<bool> UnlockUserAccountAsync(Guid UserID)
         {
-            var user = await GetUserByIdAsync(userId);
+            var user = await GetUserByIdAsync(UserID);
             if (user == null) return false;
 
             user.LockoutEnabled = false;
@@ -239,11 +239,11 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<User> UpdateUserProfileAsync(Guid userId, UpdateUserDto updateDto)
+        public async Task<User> UpdateUserProfileAsync(Guid UserID, UpdateUserDto updateDto)
         {
-            var user = await GetUserByIdAsync(userId);
+            var user = await GetUserByIdAsync(UserID);
             if (user == null)
-                throw new KeyNotFoundException($"User with ID {userId} not found");
+                throw new KeyNotFoundException($"User with ID {UserID} not found");
 
             // Update properties
             if (!string.IsNullOrEmpty(updateDto.FirstName))
@@ -269,9 +269,9 @@ namespace SphereScheduleAPI.Application.Services
             return user;
         }
 
-        public async Task<bool> UpdateUserPreferencesAsync(Guid userId, string preferencesJson)
+        public async Task<bool> UpdateUserPreferencesAsync(Guid UserID, string preferencesJson)
         {
-            var user = await GetUserByIdAsync(userId);
+            var user = await GetUserByIdAsync(UserID);
             if (user == null) return false;
 
             user.Preferences = preferencesJson;
@@ -281,9 +281,9 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<bool> UpdateAvatarAsync(Guid userId, string avatarUrl)
+        public async Task<bool> UpdateAvatarAsync(Guid UserID, string avatarUrl)
         {
-            var user = await GetUserByIdAsync(userId);
+            var user = await GetUserByIdAsync(UserID);
             if (user == null) return false;
 
             user.AvatarUrl = avatarUrl;
@@ -293,9 +293,9 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<bool> DeactivateAccountAsync(Guid userId)
+        public async Task<bool> DeactivateAccountAsync(Guid UserID)
         {
-            var user = await GetUserByIdAsync(userId);
+            var user = await GetUserByIdAsync(UserID);
             if (user == null) return false;
 
             user.IsActive = false;
@@ -305,9 +305,9 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<bool> ReactivateAccountAsync(Guid userId)
+        public async Task<bool> ReactivateAccountAsync(Guid UserID)
         {
-            var user = await GetUserByIdAsync(userId);
+            var user = await GetUserByIdAsync(UserID);
             if (user == null) return false;
 
             user.IsActive = true;
@@ -317,9 +317,9 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<bool> UpgradeAccountAsync(Guid userId, string newAccountType, DateTime? subscriptionEndDate = null)
+        public async Task<bool> UpgradeAccountAsync(Guid UserID, string newAccountType, DateTime? subscriptionEndDate = null)
         {
-            var user = await GetUserByIdAsync(userId);
+            var user = await GetUserByIdAsync(UserID);
             if (user == null) return false;
 
             user.AccountType = newAccountType;
@@ -331,9 +331,9 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<bool> CancelSubscriptionAsync(Guid userId)
+        public async Task<bool> CancelSubscriptionAsync(Guid UserID)
         {
-            var user = await GetUserByIdAsync(userId);
+            var user = await GetUserByIdAsync(UserID);
             if (user == null) return false;
 
             user.AccountType = "free";
@@ -356,22 +356,22 @@ namespace SphereScheduleAPI.Application.Services
                 .AnyAsync(u => u.Username == username && !u.IsDeleted);
         }
 
-        public async Task<bool> IsEmailAvailableAsync(string email, Guid? excludeUserId = null)
+        public async Task<bool> IsEmailAvailableAsync(string email, Guid? excludeUserID = null)
         {
             var query = _context.Users.Where(u => u.Email == email && !u.IsDeleted);
 
-            if (excludeUserId.HasValue)
-                query = query.Where(u => u.UserId != excludeUserId.Value);
+            if (excludeUserID.HasValue)
+                query = query.Where(u => u.UserID != excludeUserID.Value);
 
             return !await query.AnyAsync();
         }
 
-        public async Task<bool> IsUsernameAvailableAsync(string username, Guid? excludeUserId = null)
+        public async Task<bool> IsUsernameAvailableAsync(string username, Guid? excludeUserID = null)
         {
             var query = _context.Users.Where(u => u.Username == username && !u.IsDeleted);
 
-            if (excludeUserId.HasValue)
-                query = query.Where(u => u.UserId != excludeUserId.Value);
+            if (excludeUserID.HasValue)
+                query = query.Where(u => u.UserID != excludeUserID.Value);
 
             return !await query.AnyAsync();
         }
@@ -406,11 +406,11 @@ namespace SphereScheduleAPI.Application.Services
             };
         }
 
-        public async Task<IEnumerable<UserActivityDto>> GetUserActivityLogsAsync(Guid userId, DateTime? startDate = null, DateTime? endDate = null)
+        public async Task<IEnumerable<UserActivityDto>> GetUserActivityLogsAsync(Guid UserID, DateTime? startDate = null, DateTime? endDate = null)
         {
             // This would typically query an activity log table
             // For now, returning mock data based on user's last activity
-            var user = await GetUserByIdAsync(userId);
+            var user = await GetUserByIdAsync(UserID);
             if (user == null) return new List<UserActivityDto>();
 
             var activities = new List<UserActivityDto>
@@ -438,23 +438,23 @@ namespace SphereScheduleAPI.Application.Services
             return activities.OrderByDescending(a => a.Timestamp);
         }
 
-        public async Task<Dictionary<string, object>> GetUserDashboardStatsAsync(Guid userId)
+        public async Task<Dictionary<string, object>> GetUserDashboardStatsAsync(Guid UserID)
         {
-            var user = await GetUserByIdAsync(userId);
+            var user = await GetUserByIdAsync(UserID);
             if (user == null) return new Dictionary<string, object>();
 
             // Get counts from related tables
             var taskCount = await _context.Tasks
-                .CountAsync(t => t.UserId == userId && !t.IsDeleted);
+                .CountAsync(t => t.UserID == UserID && !t.IsDeleted);
 
             var appointmentCount = await _context.Appointments
-                .CountAsync(a => a.UserId == userId && !a.IsDeleted);
+                .CountAsync(a => a.UserID == UserID && !a.IsDeleted);
 
             var completedTasks = await _context.Tasks
-                .CountAsync(t => t.UserId == userId && !t.IsDeleted && t.Status == "completed");
+                .CountAsync(t => t.UserID == UserID && !t.IsDeleted && t.Status == "completed");
 
             var upcomingAppointments = await _context.Appointments
-                .CountAsync(a => a.UserId == userId && !a.IsDeleted &&
+                .CountAsync(a => a.UserID == UserID && !a.IsDeleted &&
                                 a.Status == "scheduled" &&
                                 a.StartDateTime > DateTimeOffset.UtcNow);
 
@@ -532,9 +532,9 @@ namespace SphereScheduleAPI.Application.Services
                 .ToListAsync();
         }
 
-        public async Task<bool> UpdateUserRoleAsync(Guid userId, string accountType)
+        public async Task<bool> UpdateUserRoleAsync(Guid UserID, string accountType)
         {
-            var user = await GetUserByIdAsync(userId);
+            var user = await GetUserByIdAsync(UserID);
             if (user == null) return false;
 
             user.AccountType = accountType;
@@ -544,10 +544,10 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<bool> ImpersonateUserAsync(Guid adminUserId, Guid targetUserId)
+        public async Task<bool> ImpersonateUserAsync(Guid adminUserID, Guid targetUserID)
         {
-            var admin = await GetUserByIdAsync(adminUserId);
-            var target = await GetUserByIdAsync(targetUserId);
+            var admin = await GetUserByIdAsync(adminUserID);
+            var target = await GetUserByIdAsync(targetUserID);
 
             if (admin == null || target == null || admin.AccountType != "admin")
                 return false;
@@ -557,10 +557,10 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<bool> BulkUpdateUsersAsync(Guid[] userIds, Action<User> updateAction)
+        public async Task<bool> BulkUpdateUsersAsync(Guid[] UserIDs, Action<User> updateAction)
         {
             var users = await _context.Users
-                .Where(u => userIds.Contains(u.UserId) && !u.IsDeleted)
+                .Where(u => UserIDs.Contains(u.UserID) && !u.IsDeleted)
                 .ToListAsync();
 
             foreach (var user in users)
@@ -573,29 +573,29 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<bool> SendBulkNotificationAsync(Guid[] userIds, string message)
+        public async Task<bool> SendBulkNotificationAsync(Guid[] UserIDs, string message)
         {
             // This would typically send notifications via email, push, etc.
             // For now, just validate the users exist
             var users = await _context.Users
-                .Where(u => userIds.Contains(u.UserId) && !u.IsDeleted && u.IsActive)
+                .Where(u => UserIDs.Contains(u.UserID) && !u.IsDeleted && u.IsActive)
                 .ToListAsync();
 
             return users.Count > 0;
         }
 
-        public async Task<string> ExportUserDataAsync(Guid userId)
+        public async Task<string> ExportUserDataAsync(Guid UserID)
         {
-            var user = await GetUserByIdAsync(userId);
+            var user = await GetUserByIdAsync(UserID);
             if (user == null) return null;
 
             // Get related data
             var tasks = await _context.Tasks
-                .Where(t => t.UserId == userId && !t.IsDeleted)
+                .Where(t => t.UserID == UserID && !t.IsDeleted)
                 .ToListAsync();
 
             var appointments = await _context.Appointments
-                .Where(a => a.UserId == userId && !a.IsDeleted)
+                .Where(a => a.UserID == UserID && !a.IsDeleted)
                 .ToListAsync();
 
             // Create JSON export
@@ -603,7 +603,7 @@ namespace SphereScheduleAPI.Application.Services
             {
                 user = new
                 {
-                    user.UserId,
+                    user.UserID,
                     user.Email,
                     user.Username,
                     user.DisplayName,
@@ -625,12 +625,12 @@ namespace SphereScheduleAPI.Application.Services
             return System.Text.Json.JsonSerializer.Serialize(exportData);
         }
 
-        public async Task<byte[]> ExportUsersToCsvAsync(IEnumerable<Guid> userIds = null)
+        public async Task<byte[]> ExportUsersToCsvAsync(IEnumerable<Guid> UserIDs = null)
         {
             var query = _context.Users.Where(u => !u.IsDeleted);
 
-            if (userIds != null)
-                query = query.Where(u => userIds.Contains(u.UserId));
+            if (UserIDs != null)
+                query = query.Where(u => UserIDs.Contains(u.UserID));
 
             var users = await query
                 .OrderBy(u => u.CreatedAt)
@@ -639,20 +639,20 @@ namespace SphereScheduleAPI.Application.Services
             // Create CSV content
             var csvLines = new List<string>
             {
-                "UserId,Email,Username,DisplayName,AccountType,CreatedAt,LastLoginAt,IsActive"
+                "UserID,Email,Username,DisplayName,AccountType,CreatedAt,LastLoginAt,IsActive"
             };
 
             foreach (var user in users)
             {
-                csvLines.Add($"{user.UserId},{user.Email},{user.Username},{user.DisplayName},{user.AccountType},{user.CreatedAt:yyyy-MM-dd HH:mm:ss},{user.LastLoginAt:yyyy-MM-dd HH:mm:ss},{user.IsActive}");
+                csvLines.Add($"{user.UserID},{user.Email},{user.Username},{user.DisplayName},{user.AccountType},{user.CreatedAt:yyyy-MM-dd HH:mm:ss},{user.LastLoginAt:yyyy-MM-dd HH:mm:ss},{user.IsActive}");
             }
 
             return System.Text.Encoding.UTF8.GetBytes(string.Join(Environment.NewLine, csvLines));
         }
 
-        public async Task<bool> EnableTwoFactorAsync(Guid userId, string twoFactorSecret)
+        public async Task<bool> EnableTwoFactorAsync(Guid UserID, string twoFactorSecret)
         {
-            var user = await GetUserByIdAsync(userId);
+            var user = await GetUserByIdAsync(UserID);
             if (user == null) return false;
 
             user.TwoFactorEnabled = true;
@@ -664,9 +664,9 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<bool> DisableTwoFactorAsync(Guid userId)
+        public async Task<bool> DisableTwoFactorAsync(Guid UserID)
         {
-            var user = await GetUserByIdAsync(userId);
+            var user = await GetUserByIdAsync(UserID);
             if (user == null) return false;
 
             user.TwoFactorEnabled = false;
@@ -677,7 +677,7 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<bool> ValidateTwoFactorCodeAsync(Guid userId, string code)
+        public async Task<bool> ValidateTwoFactorCodeAsync(Guid UserID, string code)
         {
             // In a real implementation, validate the TOTP code
             // For now, return true for demonstration

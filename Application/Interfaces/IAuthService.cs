@@ -13,7 +13,7 @@ namespace SphereScheduleAPI.Application.Interfaces
         // Changed from RefreshTokenDto to AuthRefreshTokenDto
         Task<AuthResponseByTokenDto> RefreshTokenAsync(AuthRefreshTokenDto refreshTokenDto);
 
-        Task<bool> LogoutAsync(Guid userId, string token);
+        Task<bool> LogoutAsync(Guid UserID, string token);
 
         // Changed from ForgotPasswordDto to AuthForgotPasswordDto
         Task<bool> ForgotPasswordAsync(AuthForgotPasswordDto forgotPasswordDto);
@@ -22,7 +22,7 @@ namespace SphereScheduleAPI.Application.Interfaces
         Task<bool> ResetPasswordAsync(AuthResetPasswordDto resetPasswordDto);
 
         // Changed from ChangePasswordDto to AuthChangePasswordDto
-        Task<bool> ChangePasswordAsync(Guid userId, AuthChangePasswordDto changePasswordDto);
+        Task<bool> ChangePasswordAsync(Guid UserID, AuthChangePasswordDto changePasswordDto);
 
         // Changed from VerifyEmailDto to AuthVerifyEmailDto
         Task<bool> VerifyEmailAsync(AuthVerifyEmailDto verifyEmailDto);

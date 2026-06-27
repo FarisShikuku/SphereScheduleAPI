@@ -47,12 +47,12 @@ namespace SphereScheduleAPI.API.Controllers
             return CreatedAtAction(nameof(GetActivityLogById), new { id = activityLog.LogId }, activityLog);
         }
 
-        [HttpGet("user/{userId}")]
+        [HttpGet("user/{UserID}")]
         [ProducesResponseType(typeof(IEnumerable<ActivityLogDto>), 200)]
         [ProducesResponseType(404)]
-        public async Task<IActionResult> GetUserActivityLogs(Guid userId, [FromQuery] ActivityLogFilterDto filterDto)
+        public async Task<IActionResult> GetUserActivityLogs(Guid UserID, [FromQuery] ActivityLogFilterDto filterDto)
         {
-            var activityLogs = await _activityLogService.GetActivityLogsByUserIdAsync(userId, filterDto);
+            var activityLogs = await _activityLogService.GetActivityLogsByUserIDAsync(UserID, filterDto);
             return Ok(activityLogs);
         }
 
@@ -74,12 +74,12 @@ namespace SphereScheduleAPI.API.Controllers
             return Ok(statistics);
         }
 
-        [HttpGet("user/{userId}/summary")]
+        [HttpGet("user/{UserID}/summary")]
         [ProducesResponseType(typeof(UserActivitySummaryDto), 200)]
         [ProducesResponseType(404)]
-        public async Task<IActionResult> GetUserActivitySummary(Guid userId)
+        public async Task<IActionResult> GetUserActivitySummary(Guid UserID)
         {
-            var summary = await _activityLogService.GetUserActivitySummaryAsync(userId);
+            var summary = await _activityLogService.GetUserActivitySummaryAsync(UserID);
             return Ok(summary);
         }
 
@@ -117,8 +117,8 @@ namespace SphereScheduleAPI.API.Controllers
         [ProducesResponseType(typeof(IEnumerable<ActivityLogDto>), 200)]
         public async Task<IActionResult> GetMyActivity([FromQuery] ActivityLogFilterDto filterDto)
         {
-            var userId = GetUserIdFromToken();
-            filterDto.UserId = userId;
+            var UserID = GetUserIDFromToken();
+            filterDto.UserID = UserID;
 
             var activityLogs = await _activityLogService.GetActivityLogsByFilterAsync(filterDto);
             return Ok(activityLogs);
@@ -146,7 +146,7 @@ namespace SphereScheduleAPI.API.Controllers
             });
         }
 
-        private Guid GetUserIdFromToken()
+        private Guid GetUserIDFromToken()
         {
             // Extract user ID from JWT token
             // For demo, returning a hardcoded ID

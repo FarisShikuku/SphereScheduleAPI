@@ -5,8 +5,8 @@ namespace SphereScheduleAPI.Application.DTOs
 {
     public class SubtaskDto
     {
-        public Guid SubtaskId { get; set; }
-        public Guid TaskId { get; set; }
+        public Guid SubTaskID { get; set; }
+        public Guid TaskID { get; set; }
         public string Title { get; set; }
         public string Description { get; set; }
         public string Status { get; set; }
@@ -132,7 +132,7 @@ namespace SphereScheduleAPI.Application.DTOs
     public class BulkSubtaskActionDto
     {
         [Required]
-        public Guid[] SubtaskIds { get; set; }
+        public Guid[] SubTaskIDs { get; set; }
     }
 
     public class ChangeSubtaskStatusDto
@@ -159,7 +159,7 @@ namespace SphereScheduleAPI.Application.DTOs
     public class MoveSubtaskDto
     {
         [Required]
-        public Guid NewTaskId { get; set; }
+        public Guid NewTaskID { get; set; }
     }
 
     public class CreateMultipleSubtasksDto

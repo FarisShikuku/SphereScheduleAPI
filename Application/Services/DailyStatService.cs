@@ -33,16 +33,16 @@ namespace SphereScheduleAPI.Application.Services
                 .FirstOrDefaultAsync(ds => ds.StatId == statId);
         }
 
-        public async Task<DailyStat> GetDailyStatByDateAsync(Guid userId, DateTime date)
+        public async Task<DailyStat> GetDailyStatByDateAsync(Guid UserID, DateTime date)
         {
             return await _context.DailyStats
-                .FirstOrDefaultAsync(ds => ds.UserId == userId && ds.StatDate.Date == date.Date);
+                .FirstOrDefaultAsync(ds => ds.UserID == UserID && ds.StatDate.Date == date.Date);
         }
 
-        public async Task<IEnumerable<DailyStat>> GetUserDailyStatsAsync(Guid userId, DateTime? startDate = null, DateTime? endDate = null)
+        public async Task<IEnumerable<DailyStat>> GetUserDailyStatsAsync(Guid UserID, DateTime? startDate = null, DateTime? endDate = null)
         {
             var query = _context.DailyStats
-                .Where(ds => ds.UserId == userId);
+                .Where(ds => ds.UserID == UserID);
 
             if (startDate.HasValue)
                 query = query.Where(ds => ds.StatDate >= startDate.Value.Date);
@@ -57,8 +57,7 @@ namespace SphereScheduleAPI.Application.Services
 
         public async Task<DailyStat> CreateDailyStatAsync(DailyStat dailyStat)
         {
-            // Check if stat already exists for this date
-            var existing = await GetDailyStatByDateAsync(dailyStat.UserId, dailyStat.StatDate);
+            var existing = await GetDailyStatByDateAsync(dailyStat.UserID, dailyStat.StatDate);
             if (existing != null)
                 throw new InvalidOperationException($"Daily stat already exists for date {dailyStat.StatDate:yyyy-MM-dd}");
 
@@ -92,55 +91,51 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<DailyStat> GenerateDailyStatAsync(Guid userId, DateTime date)
+        public async Task<DailyStat> GenerateDailyStatAsync(Guid UserID, DateTime date)
         {
-            // Don't generate stats for future dates
             if (date.Date > DateTime.Today)
                 throw new ArgumentException("Cannot generate stats for future dates");
 
-            // Check if stat already exists
-            var existing = await GetDailyStatByDateAsync(userId, date);
+            var existing = await GetDailyStatByDateAsync(UserID, date);
             if (existing != null)
-                return await RecalculateDailyStatAsync(userId, date);
+                return await RecalculateDailyStatAsync(UserID, date);
 
-            // Get tasks for the date
-            var tasks = (await _taskService.GetTasksByDateRangeAsync(userId, date.Date, date.Date))
+            var tasks = (await _taskService.GetTasksByDateRangeAsync(UserID, date.Date, date.Date))
                 .Where(t => !t.IsDeleted)
                 .ToList();
 
-            // Get appointments for the date
             var appointments = (await _appointmentService.GetAppointmentsByDateRangeAsync(
-                userId,
+                UserID,
                 new DateTimeOffset(date.Date),
                 new DateTimeOffset(date.Date.AddDays(1).AddTicks(-1))))
                 .Where(a => !a.IsDeleted)
                 .ToList();
 
-            // Calculate statistics
             var dailyStat = new DailyStat
             {
-                UserId = userId,
+                UserID = UserID,
                 StatDate = date.Date,
                 TotalTasks = tasks.Count,
                 CompletedTasks = tasks.Count(t => t.Status == "completed"),
                 IncompleteTasks = tasks.Count(t => t.Status != "completed" && t.Status != "cancelled"),
                 OverdueTasks = tasks.Count(t => t.Status != "completed" && t.Status != "cancelled" && t.DueDate < date.Date),
-                PersonalTasks = tasks.Count(t => t.Category == "Personal"),
-                JobTasks = tasks.Count(t => t.Category == "Work"),
-                UnspecifiedTasks = tasks.Count(t => t.Category == "unspecified"),
+                // FIXED: Using CategoryNavigation to get category name
+                PersonalTasks = tasks.Count(t => t.CategoryNavigation != null && t.CategoryNavigation.CategoryName == "Personal"),
+                JobTasks = tasks.Count(t => t.CategoryNavigation != null && t.CategoryNavigation.CategoryName == "Work"),
+                UnspecifiedTasks = tasks.Count(t => t.CategoryNavigation == null || t.CategoryNavigation.CategoryName == "unspecified"),
                 AppointmentTasks = tasks.Count(t => t.TaskType == "appointment"),
                 TotalAppointments = appointments.Count,
                 CompletedAppointments = appointments.Count(a => a.Status == "completed"),
                 CancelledAppointments = appointments.Count(a => a.Status == "cancelled"),
-                ProductivityScore = await CalculateProductivityScoreAsync(userId, date),
-                CurrentStreakDays = await CalculateCurrentStreakAsync(userId),
+                ProductivityScore = await CalculateProductivityScoreAsync(UserID, date),
+                CurrentStreakDays = await CalculateCurrentStreakAsync(UserID),
                 CalculatedAt = DateTimeOffset.UtcNow
             };
 
             return await CreateDailyStatAsync(dailyStat);
         }
 
-        public async Task<bool> GenerateMissingDailyStatsAsync(Guid userId, DateTime startDate, DateTime endDate)
+        public async Task<bool> GenerateMissingDailyStatsAsync(Guid UserID, DateTime startDate, DateTime endDate)
         {
             if (startDate > endDate)
                 throw new ArgumentException("Start date must be before end date");
@@ -150,21 +145,19 @@ namespace SphereScheduleAPI.Application.Services
 
             while (currentDate <= endDate.Date)
             {
-                // Don't generate for future dates
                 if (currentDate > DateTime.Today)
                     break;
 
-                var existing = await GetDailyStatByDateAsync(userId, currentDate);
+                var existing = await GetDailyStatByDateAsync(UserID, currentDate);
                 if (existing == null)
                 {
                     try
                     {
-                        await GenerateDailyStatAsync(userId, currentDate);
+                        await GenerateDailyStatAsync(UserID, currentDate);
                         generatedCount++;
                     }
                     catch (Exception ex)
                     {
-                        // Log error but continue with other dates
                         Console.WriteLine($"Error generating stat for {currentDate:yyyy-MM-dd}: {ex.Message}");
                     }
                 }
@@ -175,18 +168,17 @@ namespace SphereScheduleAPI.Application.Services
             return generatedCount > 0;
         }
 
-        public async Task<DailyStat> RecalculateDailyStatAsync(Guid userId, DateTime date)
+        public async Task<DailyStat> RecalculateDailyStatAsync(Guid UserID, DateTime date)
         {
-            var existing = await GetDailyStatByDateAsync(userId, date);
+            var existing = await GetDailyStatByDateAsync(UserID, date);
             if (existing == null)
-                return await GenerateDailyStatAsync(userId, date);
+                return await GenerateDailyStatAsync(UserID, date);
 
-            // Delete existing and regenerate
             await DeleteDailyStatAsync(existing.StatId);
-            return await GenerateDailyStatAsync(userId, date);
+            return await GenerateDailyStatAsync(UserID, date);
         }
 
-        public async Task<bool> RecalculateUserStatsAsync(Guid userId, DateTime? startDate = null, DateTime? endDate = null)
+        public async Task<bool> RecalculateUserStatsAsync(Guid UserID, DateTime? startDate = null, DateTime? endDate = null)
         {
             startDate ??= DateTime.Today.AddDays(-30);
             endDate ??= DateTime.Today;
@@ -200,7 +192,7 @@ namespace SphereScheduleAPI.Application.Services
                 {
                     try
                     {
-                        await RecalculateDailyStatAsync(userId, currentDate);
+                        await RecalculateDailyStatAsync(UserID, currentDate);
                         recalculatedCount++;
                     }
                     catch (Exception ex)
@@ -223,53 +215,53 @@ namespace SphereScheduleAPI.Application.Services
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<DailyStat>> GetTopProductiveDaysAsync(Guid userId, int limit = 10)
+        public async Task<IEnumerable<DailyStat>> GetTopProductiveDaysAsync(Guid UserID, int limit = 10)
         {
             return await _context.DailyStats
-                .Where(ds => ds.UserId == userId && ds.ProductivityScore.HasValue)
+                .Where(ds => ds.UserID == UserID && ds.ProductivityScore.HasValue)
                 .OrderByDescending(ds => ds.ProductivityScore)
                 .ThenByDescending(ds => ds.CompletedTasks)
                 .Take(limit)
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<DailyStat>> GetLowProductiveDaysAsync(Guid userId, int limit = 10)
+        public async Task<IEnumerable<DailyStat>> GetLowProductiveDaysAsync(Guid UserID, int limit = 10)
         {
             return await _context.DailyStats
-                .Where(ds => ds.UserId == userId && ds.ProductivityScore.HasValue)
+                .Where(ds => ds.UserID == UserID && ds.ProductivityScore.HasValue)
                 .OrderBy(ds => ds.ProductivityScore)
                 .ThenBy(ds => ds.CompletedTasks)
                 .Take(limit)
                 .ToListAsync();
         }
 
-        public async Task<DailyStat> GetMostProductiveDayAsync(Guid userId)
+        public async Task<DailyStat> GetMostProductiveDayAsync(Guid UserID)
         {
             return await _context.DailyStats
-                .Where(ds => ds.UserId == userId && ds.ProductivityScore.HasValue)
+                .Where(ds => ds.UserID == UserID && ds.ProductivityScore.HasValue)
                 .OrderByDescending(ds => ds.ProductivityScore)
                 .ThenByDescending(ds => ds.CompletedTasks)
                 .FirstOrDefaultAsync();
         }
 
-        public async Task<DailyStat> GetLeastProductiveDayAsync(Guid userId)
+        public async Task<DailyStat> GetLeastProductiveDayAsync(Guid UserID)
         {
             return await _context.DailyStats
-                .Where(ds => ds.UserId == userId && ds.ProductivityScore.HasValue)
+                .Where(ds => ds.UserID == UserID && ds.ProductivityScore.HasValue)
                 .OrderBy(ds => ds.ProductivityScore)
                 .ThenBy(ds => ds.CompletedTasks)
                 .FirstOrDefaultAsync();
         }
 
-        public async Task<IEnumerable<DailyStat>> GetStreakDaysAsync(Guid userId)
+        public async Task<IEnumerable<DailyStat>> GetStreakDaysAsync(Guid UserID)
         {
-            var stats = await GetUserDailyStatsAsync(userId, DateTime.Today.AddDays(-30), DateTime.Today);
+            var stats = await GetUserDailyStatsAsync(UserID, DateTime.Today.AddDays(-30), DateTime.Today);
             var orderedStats = stats.OrderByDescending(ds => ds.StatDate).ToList();
 
             var streakDays = new List<DailyStat>();
             foreach (var stat in orderedStats)
             {
-                if (stat.ProductivityScore >= 50) // Consider 50%+ as productive day
+                if (stat.ProductivityScore >= 50)
                     streakDays.Add(stat);
                 else
                     break;
@@ -278,12 +270,12 @@ namespace SphereScheduleAPI.Application.Services
             return streakDays.OrderBy(ds => ds.StatDate);
         }
 
-        public async Task<DailyStatSummaryDto> GetDailyStatSummaryAsync(Guid userId, DateTime? startDate = null, DateTime? endDate = null)
+        public async Task<DailyStatSummaryDto> GetDailyStatSummaryAsync(Guid UserID, DateTime? startDate = null, DateTime? endDate = null)
         {
             startDate ??= DateTime.Today.AddDays(-30);
             endDate ??= DateTime.Today;
 
-            var stats = await GetUserDailyStatsAsync(userId, startDate, endDate);
+            var stats = await GetUserDailyStatsAsync(UserID, startDate, endDate);
             var statList = stats.ToList();
 
             if (!statList.Any())
@@ -306,9 +298,9 @@ namespace SphereScheduleAPI.Application.Services
             };
         }
 
-        public async Task<ProductivityTrendDto> GetProductivityTrendAsync(Guid userId, DateTime startDate, DateTime endDate)
+        public async Task<ProductivityTrendDto> GetProductivityTrendAsync(Guid UserID, DateTime startDate, DateTime endDate)
         {
-            var stats = await GetUserDailyStatsAsync(userId, startDate, endDate);
+            var stats = await GetUserDailyStatsAsync(UserID, startDate, endDate);
             var statList = stats.OrderBy(ds => ds.StatDate).ToList();
 
             var trend = new ProductivityTrendDto
@@ -329,10 +321,10 @@ namespace SphereScheduleAPI.Application.Services
             return trend;
         }
 
-        public async Task<WeeklySummaryDto> GetWeeklySummaryAsync(Guid userId, DateTime weekStartDate)
+        public async Task<WeeklySummaryDto> GetWeeklySummaryAsync(Guid UserID, DateTime weekStartDate)
         {
             var weekEndDate = weekStartDate.AddDays(6);
-            var stats = await GetUserDailyStatsAsync(userId, weekStartDate, weekEndDate);
+            var stats = await GetUserDailyStatsAsync(UserID, weekStartDate, weekEndDate);
             var statList = stats.ToList();
 
             var summary = new WeeklySummaryDto
@@ -359,11 +351,11 @@ namespace SphereScheduleAPI.Application.Services
             return summary;
         }
 
-        public async Task<MonthlySummaryDto> GetMonthlySummaryAsync(Guid userId, int year, int month)
+        public async Task<MonthlySummaryDto> GetMonthlySummaryAsync(Guid UserID, int year, int month)
         {
             var startDate = new DateTime(year, month, 1);
             var endDate = startDate.AddMonths(1).AddDays(-1);
-            var stats = await GetUserDailyStatsAsync(userId, startDate, endDate);
+            var stats = await GetUserDailyStatsAsync(UserID, startDate, endDate);
             var statList = stats.ToList();
 
             var summary = new MonthlySummaryDto
@@ -387,14 +379,13 @@ namespace SphereScheduleAPI.Application.Services
             return summary;
         }
 
-        public async Task<YearlySummaryDto> GetYearlySummaryAsync(Guid userId, int year)
+        public async Task<YearlySummaryDto> GetYearlySummaryAsync(Guid UserID, int year)
         {
             var startDate = new DateTime(year, 1, 1);
             var endDate = new DateTime(year, 12, 31);
-            var stats = await GetUserDailyStatsAsync(userId, startDate, endDate);
+            var stats = await GetUserDailyStatsAsync(UserID, startDate, endDate);
             var statList = stats.ToList();
 
-            // Group by month
             var monthlySummaries = new Dictionary<int, MonthlySummary>();
             for (int month = 1; month <= 12; month++)
             {
@@ -427,9 +418,9 @@ namespace SphereScheduleAPI.Application.Services
             return summary;
         }
 
-        public async Task<decimal> CalculateProductivityScoreAsync(Guid userId, DateTime date)
+        public async Task<decimal> CalculateProductivityScoreAsync(Guid UserID, DateTime date)
         {
-            var tasks = (await _taskService.GetTasksByDateRangeAsync(userId, date.Date, date.Date))
+            var tasks = (await _taskService.GetTasksByDateRangeAsync(UserID, date.Date, date.Date))
                 .Where(t => !t.IsDeleted)
                 .ToList();
 
@@ -439,36 +430,29 @@ namespace SphereScheduleAPI.Application.Services
             var completedTasks = tasks.Count(t => t.Status == "completed");
             var totalTasks = tasks.Count;
 
-            // Base score: completion rate (0-70 points)
             var completionScore = (decimal)completedTasks / totalTasks * 70;
-
-            // Bonus for high-priority tasks completed (0-20 points)
             var highPriorityCompleted = tasks.Count(t => t.Status == "completed" && t.PriorityLevel == "high");
             var priorityBonus = Math.Min(highPriorityCompleted * 5, 20);
-
-            // Bonus for early completion (0-10 points)
             var earlyCompleted = tasks.Count(t => t.Status == "completed" && t.DueDate > date.Date);
             var earlyBonus = Math.Min(earlyCompleted * 2, 10);
 
             var totalScore = completionScore + priorityBonus + earlyBonus;
-
             return Math.Min(totalScore, 100);
         }
 
-        public async Task<int> CalculateCurrentStreakAsync(Guid userId)
+        public async Task<int> CalculateCurrentStreakAsync(Guid UserID)
         {
-            var todayStat = await GetDailyStatByDateAsync(userId, DateTime.Today);
-            var yesterdayStat = await GetDailyStatByDateAsync(userId, DateTime.Today.AddDays(-1));
+            var todayStat = await GetDailyStatByDateAsync(UserID, DateTime.Today);
+            var yesterdayStat = await GetDailyStatByDateAsync(UserID, DateTime.Today.AddDays(-1));
 
-            // If today is productive, check yesterday
             if (todayStat?.ProductivityScore >= 50)
             {
                 var streak = 1;
                 var checkDate = DateTime.Today.AddDays(-1);
 
-                while (checkDate >= DateTime.Today.AddDays(-365)) // Limit to 1 year back
+                while (checkDate >= DateTime.Today.AddDays(-365))
                 {
-                    var stat = await GetDailyStatByDateAsync(userId, checkDate);
+                    var stat = await GetDailyStatByDateAsync(UserID, checkDate);
                     if (stat?.ProductivityScore >= 50)
                     {
                         streak++;
@@ -486,12 +470,12 @@ namespace SphereScheduleAPI.Application.Services
             return 0;
         }
 
-        public async Task<int> CalculateLongestStreakAsync(Guid userId, DateTime? startDate = null, DateTime? endDate = null)
+        public async Task<int> CalculateLongestStreakAsync(Guid UserID, DateTime? startDate = null, DateTime? endDate = null)
         {
             startDate ??= DateTime.Today.AddDays(-365);
             endDate ??= DateTime.Today;
 
-            var stats = await GetUserDailyStatsAsync(userId, startDate, endDate);
+            var stats = await GetUserDailyStatsAsync(UserID, startDate, endDate);
             var orderedStats = stats.OrderBy(ds => ds.StatDate).ToList();
 
             var longestStreak = 0;
@@ -513,12 +497,12 @@ namespace SphereScheduleAPI.Application.Services
             return longestStreak;
         }
 
-        public async Task<Dictionary<string, decimal>> CalculateAverageDailyMetricsAsync(Guid userId, DateTime? startDate = null, DateTime? endDate = null)
+        public async Task<Dictionary<string, decimal>> CalculateAverageDailyMetricsAsync(Guid UserID, DateTime? startDate = null, DateTime? endDate = null)
         {
             startDate ??= DateTime.Today.AddDays(-30);
             endDate ??= DateTime.Today;
 
-            var stats = await GetUserDailyStatsAsync(userId, startDate, endDate);
+            var stats = await GetUserDailyStatsAsync(UserID, startDate, endDate);
             var statList = stats.ToList();
 
             if (!statList.Any())
@@ -536,12 +520,12 @@ namespace SphereScheduleAPI.Application.Services
             };
         }
 
-        public async Task<Dictionary<string, object>> CalculatePerformanceMetricsAsync(Guid userId, DateTime? startDate = null, DateTime? endDate = null)
+        public async Task<Dictionary<string, object>> CalculatePerformanceMetricsAsync(Guid UserID, DateTime? startDate = null, DateTime? endDate = null)
         {
             startDate ??= DateTime.Today.AddDays(-30);
             endDate ??= DateTime.Today;
 
-            var stats = await GetUserDailyStatsAsync(userId, startDate, endDate);
+            var stats = await GetUserDailyStatsAsync(UserID, startDate, endDate);
             var statList = stats.ToList();
 
             if (!statList.Any())
@@ -558,17 +542,17 @@ namespace SphereScheduleAPI.Application.Services
                 { "productivity_percentage", totalDays > 0 ? (decimal)productiveDays / totalDays * 100 : 0 },
                 { "best_day", statList.OrderByDescending(ds => ds.ProductivityScore).FirstOrDefault()?.StatDate },
                 { "worst_day", statList.OrderBy(ds => ds.ProductivityScore).FirstOrDefault()?.StatDate },
-                { "current_streak", await CalculateCurrentStreakAsync(userId) },
-                { "longest_streak", await CalculateLongestStreakAsync(userId, startDate, endDate) },
+                { "current_streak", await CalculateCurrentStreakAsync(UserID) },
+                { "longest_streak", await CalculateLongestStreakAsync(UserID, startDate, endDate) },
                 { "average_daily_tasks", statList.Average(ds => ds.TotalTasks) },
                 { "average_daily_completed", statList.Average(ds => ds.CompletedTasks) }
             };
         }
 
-        public async Task<ComparisonResultDto> CompareDaysAsync(Guid userId, DateTime date1, DateTime date2)
+        public async Task<ComparisonResultDto> CompareDaysAsync(Guid UserID, DateTime date1, DateTime date2)
         {
-            var stat1 = await GetDailyStatByDateAsync(userId, date1) ?? await GenerateDailyStatAsync(userId, date1);
-            var stat2 = await GetDailyStatByDateAsync(userId, date2) ?? await GenerateDailyStatAsync(userId, date2);
+            var stat1 = await GetDailyStatByDateAsync(UserID, date1) ?? await GenerateDailyStatAsync(UserID, date1);
+            var stat2 = await GetDailyStatByDateAsync(UserID, date2) ?? await GenerateDailyStatAsync(UserID, date2);
 
             return new ComparisonResultDto
             {
@@ -585,13 +569,13 @@ namespace SphereScheduleAPI.Application.Services
             };
         }
 
-        public async Task<ComparisonResultDto> CompareWeeksAsync(Guid userId, DateTime week1Start, DateTime week2Start)
+        public async Task<ComparisonResultDto> CompareWeeksAsync(Guid UserID, DateTime week1Start, DateTime week2Start)
         {
             var week1End = week1Start.AddDays(6);
             var week2End = week2Start.AddDays(6);
 
-            var week1Stats = await GetUserDailyStatsAsync(userId, week1Start, week1End);
-            var week2Stats = await GetUserDailyStatsAsync(userId, week2Start, week2End);
+            var week1Stats = await GetUserDailyStatsAsync(UserID, week1Start, week1End);
+            var week2Stats = await GetUserDailyStatsAsync(UserID, week2Start, week2End);
 
             var week1Avg = week1Stats.Any() ? week1Stats.Average(ds => ds.ProductivityScore ?? 0) : 0;
             var week2Avg = week2Stats.Any() ? week2Stats.Average(ds => ds.ProductivityScore ?? 0) : 0;
@@ -611,15 +595,15 @@ namespace SphereScheduleAPI.Application.Services
             };
         }
 
-        public async Task<ComparisonResultDto> CompareMonthsAsync(Guid userId, int year1, int month1, int year2, int month2)
+        public async Task<ComparisonResultDto> CompareMonthsAsync(Guid UserID, int year1, int month1, int year2, int month2)
         {
             var month1Start = new DateTime(year1, month1, 1);
             var month1End = month1Start.AddMonths(1).AddDays(-1);
             var month2Start = new DateTime(year2, month2, 1);
             var month2End = month2Start.AddMonths(1).AddDays(-1);
 
-            var month1Stats = await GetUserDailyStatsAsync(userId, month1Start, month1End);
-            var month2Stats = await GetUserDailyStatsAsync(userId, month2Start, month2End);
+            var month1Stats = await GetUserDailyStatsAsync(UserID, month1Start, month1End);
+            var month2Stats = await GetUserDailyStatsAsync(UserID, month2Start, month2End);
 
             var month1Avg = month1Stats.Any() ? month1Stats.Average(ds => ds.ProductivityScore ?? 0) : 0;
             var month2Avg = month2Stats.Any() ? month2Stats.Average(ds => ds.ProductivityScore ?? 0) : 0;
@@ -639,17 +623,15 @@ namespace SphereScheduleAPI.Application.Services
             };
         }
 
-        public async Task<TrendAnalysisDto> AnalyzeProductivityTrendAsync(Guid userId, DateTime startDate, DateTime endDate)
+        public async Task<TrendAnalysisDto> AnalyzeProductivityTrendAsync(Guid UserID, DateTime startDate, DateTime endDate)
         {
-            var stats = await GetUserDailyStatsAsync(userId, startDate, endDate);
+            var stats = await GetUserDailyStatsAsync(UserID, startDate, endDate);
             var statList = stats.OrderBy(ds => ds.StatDate).ToList();
 
             if (statList.Count < 2)
                 return new TrendAnalysisDto { HasEnoughData = false };
 
             var productivityScores = statList.Select(ds => ds.ProductivityScore ?? 0).ToList();
-
-            // Simple linear regression for trend
             var xValues = Enumerable.Range(0, productivityScores.Count).Select(i => (double)i).ToArray();
             var yValues = productivityScores.Select(s => (double)s).ToArray();
 
@@ -662,7 +644,6 @@ namespace SphereScheduleAPI.Application.Services
             var slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
             var intercept = (sumY - slope * sumX) / n;
 
-            // Calculate R-squared
             var yMean = yValues.Average();
             var ssTot = yValues.Sum(y => Math.Pow(y - yMean, 2));
             var ssRes = yValues.Zip(xValues, (y, x) => Math.Pow(y - (slope * x + intercept), 2)).Sum();
@@ -682,20 +663,20 @@ namespace SphereScheduleAPI.Application.Services
                 {
                     Date = ds.StatDate,
                     ProductivityScore = ds.ProductivityScore ?? 0,
-                    PredictedScore = (decimal)(slope * Array.IndexOf(xValues, (double)Array.IndexOf(xValues, xValues.FirstOrDefault(x => Math.Abs(x - Array.IndexOf(xValues, xValues.First())) < 0.001))) + intercept)
+                    PredictedScore = (decimal)(slope * Array.IndexOf(xValues, xValues.First()) + intercept)
                 }).ToList()
             };
         }
 
-        public async Task<bool> CheckDailyGoalAsync(Guid userId, DateTime date, int targetTasks = 5)
+        public async Task<bool> CheckDailyGoalAsync(Guid UserID, DateTime date, int targetTasks = 5)
         {
-            var stat = await GetDailyStatByDateAsync(userId, date) ?? await GenerateDailyStatAsync(userId, date);
+            var stat = await GetDailyStatByDateAsync(UserID, date) ?? await GenerateDailyStatAsync(UserID, date);
             return stat.CompletedTasks >= targetTasks;
         }
 
-        public async Task<GoalProgressDto> GetGoalProgressAsync(Guid userId, DateTime startDate, DateTime endDate, int targetTasksPerDay)
+        public async Task<GoalProgressDto> GetGoalProgressAsync(Guid UserID, DateTime startDate, DateTime endDate, int targetTasksPerDay)
         {
-            var stats = await GetUserDailyStatsAsync(userId, startDate, endDate);
+            var stats = await GetUserDailyStatsAsync(UserID, startDate, endDate);
             var statList = stats.ToList();
 
             var totalDays = (endDate - startDate).Days + 1;
@@ -718,9 +699,9 @@ namespace SphereScheduleAPI.Application.Services
             };
         }
 
-        public async Task<IEnumerable<DateTime>> GetGoalAchievedDaysAsync(Guid userId, DateTime startDate, DateTime endDate, int targetTasksPerDay)
+        public async Task<IEnumerable<DateTime>> GetGoalAchievedDaysAsync(Guid UserID, DateTime startDate, DateTime endDate, int targetTasksPerDay)
         {
-            var stats = await GetUserDailyStatsAsync(userId, startDate, endDate);
+            var stats = await GetUserDailyStatsAsync(UserID, startDate, endDate);
             return stats
                 .Where(ds => ds.CompletedTasks >= targetTasksPerDay)
                 .Select(ds => ds.StatDate)
@@ -742,12 +723,12 @@ namespace SphereScheduleAPI.Application.Services
             {
                 try
                 {
-                    await GenerateDailyStatAsync(user.UserId, date);
+                    await GenerateDailyStatAsync(user.UserID, date);
                     generatedCount++;
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error generating stat for user {user.UserId} on {date:yyyy-MM-dd}: {ex.Message}");
+                    Console.WriteLine($"Error generating stat for user {user.UserID} on {date:yyyy-MM-dd}: {ex.Message}");
                 }
             }
 
@@ -768,12 +749,12 @@ namespace SphereScheduleAPI.Application.Services
             {
                 try
                 {
-                    await RecalculateUserStatsAsync(user.UserId, startDate, endDate);
+                    await RecalculateUserStatsAsync(user.UserID, startDate, endDate);
                     recalculatedCount++;
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error recalculating stats for user {user.UserId}: {ex.Message}");
+                    Console.WriteLine($"Error recalculating stats for user {user.UserID}: {ex.Message}");
                 }
             }
 
@@ -795,12 +776,12 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<byte[]> ExportDailyStatsToCsvAsync(Guid userId, DateTime? startDate = null, DateTime? endDate = null)
+        public async Task<byte[]> ExportDailyStatsToCsvAsync(Guid UserID, DateTime? startDate = null, DateTime? endDate = null)
         {
             startDate ??= DateTime.Today.AddDays(-30);
             endDate ??= DateTime.Today;
 
-            var stats = await GetUserDailyStatsAsync(userId, startDate, endDate);
+            var stats = await GetUserDailyStatsAsync(UserID, startDate, endDate);
             var statList = stats.OrderBy(ds => ds.StatDate).ToList();
 
             var csvLines = new List<string>
@@ -816,17 +797,17 @@ namespace SphereScheduleAPI.Application.Services
             return System.Text.Encoding.UTF8.GetBytes(string.Join(Environment.NewLine, csvLines));
         }
 
-        public async Task<string> ExportDailyStatsToJsonAsync(Guid userId, DateTime? startDate = null, DateTime? endDate = null)
+        public async Task<string> ExportDailyStatsToJsonAsync(Guid UserID, DateTime? startDate = null, DateTime? endDate = null)
         {
             startDate ??= DateTime.Today.AddDays(-30);
             endDate ??= DateTime.Today;
 
-            var stats = await GetUserDailyStatsAsync(userId, startDate, endDate);
+            var stats = await GetUserDailyStatsAsync(UserID, startDate, endDate);
             var statList = stats.OrderBy(ds => ds.StatDate).ToList();
 
             var exportData = new
             {
-                UserId = userId,
+                UserID = UserID,
                 ExportDate = DateTime.UtcNow,
                 DateRange = new { Start = startDate, End = endDate },
                 Statistics = statList.Select(stat => new
@@ -853,9 +834,9 @@ namespace SphereScheduleAPI.Application.Services
             return System.Text.Json.JsonSerializer.Serialize(exportData, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
         }
 
-        public async Task<bool> DailyStatExistsAsync(Guid userId, DateTime date)
+        public async Task<bool> DailyStatExistsAsync(Guid UserID, DateTime date)
         {
-            return await GetDailyStatByDateAsync(userId, date) != null;
+            return await GetDailyStatByDateAsync(UserID, date) != null;
         }
 
         public async Task<bool> IsDateInFutureAsync(DateTime date)
@@ -863,7 +844,6 @@ namespace SphereScheduleAPI.Application.Services
             return date.Date > DateTime.Today;
         }
 
-        // Helper method for trend analysis
         private string CalculateTrendDirection(List<decimal> scores)
         {
             if (scores.Count < 2)

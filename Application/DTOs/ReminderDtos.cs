@@ -4,10 +4,10 @@ namespace SphereScheduleAPI.Application.DTOs
 {
     public class ReminderDto
     {
-        public Guid ReminderId { get; set; }
-        public Guid UserId { get; set; }
-        public Guid? TaskId { get; set; }
-        public Guid? AppointmentId { get; set; }
+        public Guid ReminderID { get; set; }
+        public Guid UserID { get; set; }
+        public Guid? TaskID { get; set; }
+        public Guid? AppointmentID { get; set; }
         public string ReminderType { get; set; } = "general";
         public string Title { get; set; } = string.Empty;
         public string? Message { get; set; }
@@ -24,11 +24,11 @@ namespace SphereScheduleAPI.Application.DTOs
     public class CreateReminderDto
     {
         [Required]
-        public Guid UserId { get; set; }
+        public Guid UserID { get; set; }
 
-        public Guid? TaskId { get; set; }
+        public Guid? TaskID { get; set; }
 
-        public Guid? AppointmentId { get; set; }
+        public Guid? AppointmentID { get; set; }
 
         [Required]
         [MaxLength(20)]
@@ -77,9 +77,9 @@ namespace SphereScheduleAPI.Application.DTOs
 
     public class ReminderFilterDto
     {
-        public Guid? UserId { get; set; }
-        public Guid? TaskId { get; set; }
-        public Guid? AppointmentId { get; set; }
+        public Guid? UserID { get; set; }
+        public Guid? TaskID { get; set; }
+        public Guid? AppointmentID { get; set; }
         public string? ReminderType { get; set; }
         public string? Status { get; set; }
         public DateTimeOffset? FromDate { get; set; }
@@ -91,15 +91,5 @@ namespace SphereScheduleAPI.Application.DTOs
     }
 
     // Custom validation attribute for future dates
-    public class FutureDateAttribute : ValidationAttribute
-    {
-        public override bool IsValid(object? value)
-        {
-            if (value is DateTimeOffset dateTimeOffset)
-            {
-                return dateTimeOffset > DateTimeOffset.UtcNow;
-            }
-            return false;
-        }
-    }
+    
 }

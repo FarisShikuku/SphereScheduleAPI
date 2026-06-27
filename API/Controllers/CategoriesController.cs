@@ -28,14 +28,14 @@ namespace SphereScheduleAPI.API.Controllers
             _mapper = mapper;
         }
 
-        private Guid GetCurrentUserId()
+        private Guid GetCurrentUserID()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            var UserIDClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(UserIDClaim) || !Guid.TryParse(UserIDClaim, out var UserID))
             {
                 throw new UnauthorizedAccessException("Invalid user ID in token");
             }
-            return userId;
+            return UserID;
         }
 
         // GET: api/categories
@@ -44,15 +44,15 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var categories = await _categoryService.GetUserCategoriesAsync(userId);
+                var UserID = GetCurrentUserID();
+                var categories = await _categoryService.GetUserCategoriesAsync(UserID);
 
                 var categoryDtos = _mapper.Map<IEnumerable<CategoryDto>>(categories);
 
                 // Enhance with task counts
                 foreach (var categoryDto in categoryDtos)
                 {
-                    var category = categories.FirstOrDefault(c => c.CategoryId == categoryDto.CategoryId);
+                    var category = categories.FirstOrDefault(c => c.CategoryID == categoryDto.CategoryID);
                     if (category != null)
                     {
                         categoryDto.TaskCount = category.Tasks.Count;
@@ -79,8 +79,8 @@ namespace SphereScheduleAPI.API.Controllers
                     return NotFound(new { message = $"Category with ID {id} not found" });
 
                 // Check ownership
-                var userId = GetCurrentUserId();
-                if (category.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (category.UserID != UserID)
                     return Forbid();
 
                 var categoryDto = _mapper.Map<CategoryDto>(category);
@@ -101,17 +101,17 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var UserID = GetCurrentUserID();
 
                 // Map DTO to entity
                 var category = _mapper.Map<Category>(createDto);
-                category.UserId = userId;
+                category.UserID = UserID;
 
                 var created = await _categoryService.CreateCategoryAsync(category);
                 var categoryDto = _mapper.Map<CategoryDto>(created);
 
                 return CreatedAtAction(nameof(GetCategory),
-                    new { id = created.CategoryId },
+                    new { id = created.CategoryID },
                     categoryDto);
             }
             catch (InvalidOperationException ex)
@@ -135,8 +135,8 @@ namespace SphereScheduleAPI.API.Controllers
                     return NotFound(new { message = $"Category with ID {id} not found" });
 
                 // Check ownership
-                var userId = GetCurrentUserId();
-                if (existing.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (existing.UserID != UserID)
                     return Forbid();
 
                 // Map updates
@@ -171,8 +171,8 @@ namespace SphereScheduleAPI.API.Controllers
                     return NotFound(new { message = $"Category with ID {id} not found" });
 
                 // Check ownership
-                var userId = GetCurrentUserId();
-                if (existing.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (existing.UserID != UserID)
                     return Forbid();
 
                 // Check if category can be deleted
@@ -197,15 +197,15 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var categories = await _categoryService.GetCategoriesByTypeAsync(userId, type);
+                var UserID = GetCurrentUserID();
+                var categories = await _categoryService.GetCategoriesByTypeAsync(UserID, type);
 
                 var categoryDtos = _mapper.Map<IEnumerable<CategoryDto>>(categories);
 
                 // Enhance with task counts
                 foreach (var categoryDto in categoryDtos)
                 {
-                    var category = categories.FirstOrDefault(c => c.CategoryId == categoryDto.CategoryId);
+                    var category = categories.FirstOrDefault(c => c.CategoryID == categoryDto.CategoryID);
                     if (category != null)
                     {
                         categoryDto.TaskCount = category.Tasks.Count;
@@ -227,8 +227,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var category = await _categoryService.GetDefaultCategoryAsync(userId);
+                var UserID = GetCurrentUserID();
+                var category = await _categoryService.GetDefaultCategoryAsync(UserID);
 
                 if (category == null)
                     return NotFound(new { message = "No default category found" });
@@ -256,8 +256,8 @@ namespace SphereScheduleAPI.API.Controllers
                     return NotFound(new { message = $"Category with ID {id} not found" });
 
                 // Check ownership
-                var userId = GetCurrentUserId();
-                if (existing.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (existing.UserID != UserID)
                     return Forbid();
 
                 var success = await _categoryService.SetDefaultCategoryAsync(id);
@@ -283,8 +283,8 @@ namespace SphereScheduleAPI.API.Controllers
                     return NotFound(new { message = $"Category with ID {id} not found" });
 
                 // Check ownership
-                var userId = GetCurrentUserId();
-                if (existing.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (existing.UserID != UserID)
                     return Forbid();
 
                 var success = await _categoryService.UpdateCategoryOrderAsync(id, orderDto.NewOrder);
@@ -305,8 +305,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var success = await _categoryService.ReorderCategoriesAsync(userId, reorderDto.CategoryOrders);
+                var UserID = GetCurrentUserID();
+                var success = await _categoryService.ReorderCategoriesAsync(UserID, reorderDto.CategoryOrders);
 
                 if (!success)
                     return StatusCode(500, new { message = "Failed to reorder categories" });
@@ -330,8 +330,8 @@ namespace SphereScheduleAPI.API.Controllers
                     return NotFound(new { message = $"Category with ID {id} not found" });
 
                 // Check ownership
-                var userId = GetCurrentUserId();
-                if (existing.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (existing.UserID != UserID)
                     return Forbid();
 
                 var success = await _categoryService.UpdateCategoryColorAsync(id, colorDto.ColorCode);
@@ -357,8 +357,8 @@ namespace SphereScheduleAPI.API.Controllers
                     return NotFound(new { message = $"Category with ID {id} not found" });
 
                 // Check ownership
-                var userId = GetCurrentUserId();
-                if (existing.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (existing.UserID != UserID)
                     return Forbid();
 
                 var success = await _categoryService.UpdateCategoryIconAsync(id, iconDto.IconName);
@@ -379,11 +379,11 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var UserID = GetCurrentUserID();
 
-                var categories = await _categoryService.GetUserCategoriesAsync(userId);
-                var usageStats = await _categoryService.GetCategoryUsageStatisticsAsync(userId);
-                var mostUsedCategory = await _categoryService.GetMostUsedCategoryAsync(userId);
+                var categories = await _categoryService.GetUserCategoriesAsync(UserID);
+                var usageStats = await _categoryService.GetCategoryUsageStatisticsAsync(UserID);
+                var mostUsedCategory = await _categoryService.GetMostUsedCategoryAsync(UserID);
 
                 var statistics = new CategoryStatisticsDto
                 {
@@ -411,14 +411,14 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var categories = await _categoryService.GetCategoriesWithTaskCountAsync(userId);
+                var UserID = GetCurrentUserID();
+                var categories = await _categoryService.GetCategoriesWithTaskCountAsync(UserID);
 
                 var categoryDtos = _mapper.Map<IEnumerable<CategoryDto>>(categories);
 
                 foreach (var categoryDto in categoryDtos)
                 {
-                    var category = categories.FirstOrDefault(c => c.CategoryId == categoryDto.CategoryId);
+                    var category = categories.FirstOrDefault(c => c.CategoryID == categoryDto.CategoryID);
                     if (category != null)
                     {
                         categoryDto.TaskCount = category.Tasks.Count;
@@ -440,14 +440,14 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var categories = await _categoryService.GetUnusedCategoriesAsync(userId, days);
+                var UserID = GetCurrentUserID();
+                var categories = await _categoryService.GetUnusedCategoriesAsync(UserID, days);
 
                 var categoryDtos = _mapper.Map<IEnumerable<CategoryDto>>(categories);
 
                 foreach (var categoryDto in categoryDtos)
                 {
-                    var category = categories.FirstOrDefault(c => c.CategoryId == categoryDto.CategoryId);
+                    var category = categories.FirstOrDefault(c => c.CategoryID == categoryDto.CategoryID);
                     if (category != null)
                     {
                         categoryDto.TaskCount = category.Tasks.Count;
@@ -469,8 +469,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var success = await _categoryService.InitializeDefaultCategoriesAsync(userId);
+                var UserID = GetCurrentUserID();
+                var success = await _categoryService.InitializeDefaultCategoriesAsync(UserID);
 
                 if (!success)
                     return Conflict(new { message = "User already has categories or initialization failed" });
@@ -489,8 +489,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var success = await _categoryService.ResetToDefaultCategoriesAsync(userId);
+                var UserID = GetCurrentUserID();
+                var success = await _categoryService.ResetToDefaultCategoriesAsync(UserID);
 
                 if (!success)
                     return BadRequest(new { message = "Cannot reset categories with tasks in custom categories" });
@@ -509,8 +509,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var exists = await _categoryService.CategoryNameExistsAsync(userId, name, excludeId);
+                var UserID = GetCurrentUserID();
+                var exists = await _categoryService.CategoryNameExistsAsync(UserID, name, excludeId);
 
                 return Ok(new { name, exists });
             }
@@ -526,19 +526,19 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                if (bulkDto.CategoryIds == null || bulkDto.CategoryIds.Length == 0)
+                if (bulkDto.CategoryIDs == null || bulkDto.CategoryIDs.Length == 0)
                     return BadRequest(new { message = "No category IDs provided" });
 
-                var userId = GetCurrentUserId();
+                var UserID = GetCurrentUserID();
 
                 // Verify all categories belong to user
-                var categories = await _categoryService.GetUserCategoriesAsync(userId);
-                var userCategoryIds = categories.Select(c => c.CategoryId).ToHashSet();
+                var categories = await _categoryService.GetUserCategoriesAsync(UserID);
+                var userCategoryIDs = categories.Select(c => c.CategoryID).ToHashSet();
 
-                if (bulkDto.CategoryIds.Any(id => !userCategoryIds.Contains(id)))
+                if (bulkDto.CategoryIDs.Any(id => !userCategoryIDs.Contains(id)))
                     return Forbid();
 
-                var success = await _categoryService.DeleteMultipleCategoriesAsync(bulkDto.CategoryIds);
+                var success = await _categoryService.DeleteMultipleCategoriesAsync(bulkDto.CategoryIDs);
                 if (!success)
                     return BadRequest(new { message = "Cannot delete categories with associated tasks" });
 
@@ -576,6 +576,6 @@ namespace SphereScheduleAPI.API.Controllers
     public class BulkCategoryActionDto
     {
         [Required]
-        public Guid[] CategoryIds { get; set; }
+        public Guid[] CategoryIDs { get; set; }
     }
 }

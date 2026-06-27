@@ -33,14 +33,14 @@ namespace SphereScheduleAPI.API.Controllers
             
         }
 
-        private Guid GetCurrentUserId()
+        private Guid GetCurrentUserID()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            var UserIDClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(UserIDClaim) || !Guid.TryParse(UserIDClaim, out var UserID))
             {
                 throw new UnauthorizedAccessException("Invalid user ID in token");
             }
-            return userId;
+            return UserID;
         }
 
         // GET: api/appointments
@@ -51,8 +51,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var appointments = await _appointmentService.GetUserAppointmentsAsync(userId, startDate, endDate);
+                var UserID = GetCurrentUserID();
+                var appointments = await _appointmentService.GetUserAppointmentsAsync(UserID, startDate, endDate);
                 return Ok(_mapper.Map<IEnumerable<AppointmentDto>>(appointments));
             }
             catch (Exception ex)
@@ -72,8 +72,8 @@ namespace SphereScheduleAPI.API.Controllers
                     return NotFound(new { message = $"Appointment with ID {id} not found" });
 
                 // Check ownership
-                var userId = GetCurrentUserId();
-                if (appointment.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (appointment.UserID != UserID)
                     return Forbid();
 
                 return Ok(_mapper.Map<AppointmentDto>(appointment));
@@ -90,11 +90,11 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var UserID = GetCurrentUserID();
 
                 // Map DTO to entity
                 var appointment = _mapper.Map<Appointment>(createDto);
-                appointment.UserId = userId;
+                appointment.UserID = UserID;
                 appointment.Status = "scheduled";
                 appointment.CalendarColor = createDto.CalendarColor ?? "#2196F3";
 
@@ -106,7 +106,7 @@ namespace SphereScheduleAPI.API.Controllers
 
                 var created = await _appointmentService.CreateAppointmentAsync(appointment);
                 return CreatedAtAction(nameof(GetAppointment),
-                    new { id = created.AppointmentId },
+                    new { id = created.AppointmentID },
                     _mapper.Map<AppointmentDto>(created));
             }
             catch (InvalidOperationException ex) when (ex.Message.Contains("Time conflict"))
@@ -120,6 +120,7 @@ namespace SphereScheduleAPI.API.Controllers
         }
 
         // PUT: api/appointments/{id}
+        // PUT: api/appointments/{id}
         [HttpPut("{id}")]
         public async Task<ActionResult<AppointmentDto>> UpdateAppointment(Guid id, [FromBody] UpdateAppointmentDto updateDto)
         {
@@ -130,18 +131,44 @@ namespace SphereScheduleAPI.API.Controllers
                     return NotFound(new { message = $"Appointment with ID {id} not found" });
 
                 // Check ownership
-                var userId = GetCurrentUserId();
-                if (existing.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (existing.UserID != UserID)
                     return Forbid();
 
-                // Map updates
-                _mapper.Map(updateDto, existing);
+                // Manually update only the fields that are provided
+                if (!string.IsNullOrEmpty(updateDto.Title))
+                    existing.Title = updateDto.Title;
+
+                if (!string.IsNullOrEmpty(updateDto.Description))
+                    existing.Description = updateDto.Description;
+
+                if (!string.IsNullOrEmpty(updateDto.Status))
+                    existing.Status = updateDto.Status;
+
+                if (!string.IsNullOrEmpty(updateDto.AppointmentType))
+                    existing.AppointmentType = updateDto.AppointmentType;
+
+                if (!string.IsNullOrEmpty(updateDto.Location))
+                    existing.Location = updateDto.Location;
+
+                if (!string.IsNullOrEmpty(updateDto.MeetingLink))
+                    existing.MeetingLink = updateDto.MeetingLink;
+
+                if (updateDto.StartDateTime.HasValue)
+                    existing.StartDateTime = updateDto.StartDateTime.Value;
+
+                if (updateDto.EndDateTime.HasValue)
+                    existing.EndDateTime = updateDto.EndDateTime.Value;
+
                 existing.UpdatedAt = DateTimeOffset.UtcNow;
 
-                // Validate end date is after start date
-                if (existing.EndDateTime <= existing.StartDateTime)
+                // Only validate dates if BOTH were provided
+                if (updateDto.StartDateTime.HasValue && updateDto.EndDateTime.HasValue)
                 {
-                    return BadRequest(new { message = "End date/time must be after start date/time" });
+                    if (existing.EndDateTime <= existing.StartDateTime)
+                    {
+                        return BadRequest(new { message = "End date/time must be after start date/time" });
+                    }
                 }
 
                 var updated = await _appointmentService.UpdateAppointmentAsync(existing);
@@ -168,8 +195,8 @@ namespace SphereScheduleAPI.API.Controllers
                     return NotFound(new { message = $"Appointment with ID {id} not found" });
 
                 // Check ownership
-                var userId = GetCurrentUserId();
-                if (existing.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (existing.UserID != UserID)
                     return Forbid();
 
                 var success = await _appointmentService.DeleteAppointmentAsync(id);
@@ -190,8 +217,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var appointments = await _appointmentService.GetUpcomingAppointmentsAsync(userId, daysAhead);
+                var UserID = GetCurrentUserID();
+                var appointments = await _appointmentService.GetUpcomingAppointmentsAsync(UserID, daysAhead);
                 return Ok(_mapper.Map<IEnumerable<AppointmentDto>>(appointments));
             }
             catch (Exception ex)
@@ -208,8 +235,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var appointments = await _appointmentService.GetAppointmentsByDateRangeAsync(userId, startDate, endDate);
+                var UserID = GetCurrentUserID();
+                var appointments = await _appointmentService.GetAppointmentsByDateRangeAsync(UserID, startDate, endDate);
                 return Ok(_mapper.Map<IEnumerable<AppointmentDto>>(appointments));
             }
             catch (Exception ex)
@@ -224,8 +251,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var appointments = await _appointmentService.GetAppointmentsByStatusAsync(userId, status);
+                var UserID = GetCurrentUserID();
+                var appointments = await _appointmentService.GetAppointmentsByStatusAsync(UserID, status);
                 return Ok(_mapper.Map<IEnumerable<AppointmentDto>>(appointments));
             }
             catch (Exception ex)
@@ -240,8 +267,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var appointments = await _appointmentService.GetAppointmentsByTypeAsync(userId, type);
+                var UserID = GetCurrentUserID();
+                var appointments = await _appointmentService.GetAppointmentsByTypeAsync(UserID, type);
                 return Ok(_mapper.Map<IEnumerable<AppointmentDto>>(appointments));
             }
             catch (Exception ex)
@@ -258,9 +285,9 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var stats = await _appointmentService.GetAppointmentStatisticsAsync(userId, startDate, endDate);
-                var count = await _appointmentService.GetAppointmentCountByUserAsync(userId);
+                var UserID = GetCurrentUserID();
+                var stats = await _appointmentService.GetAppointmentStatisticsAsync(UserID, startDate, endDate);
+                var count = await _appointmentService.GetAppointmentCountByUserAsync(UserID);
 
                 return Ok(new
                 {
@@ -290,8 +317,8 @@ namespace SphereScheduleAPI.API.Controllers
                     return NotFound(new { message = $"Appointment with ID {id} not found" });
 
                 // Check ownership
-                var userId = GetCurrentUserId();
-                if (existing.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (existing.UserID != UserID)
                     return Forbid();
 
                 var success = await _appointmentService.ChangeAppointmentStatusAsync(id, statusDto.NewStatus);
@@ -319,8 +346,8 @@ namespace SphereScheduleAPI.API.Controllers
                     return NotFound(new { message = $"Appointment with ID {id} not found" });
 
                 // Check ownership
-                var userId = GetCurrentUserId();
-                if (existing.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (existing.UserID != UserID)
                     return Forbid();
 
                 // Validate new times
@@ -353,8 +380,8 @@ namespace SphereScheduleAPI.API.Controllers
                 if (string.IsNullOrWhiteSpace(term))
                     return BadRequest(new { message = "Search term is required" });
 
-                var userId = GetCurrentUserId();
-                var appointments = await _appointmentService.SearchAppointmentsAsync(userId, term);
+                var UserID = GetCurrentUserID();
+                var appointments = await _appointmentService.SearchAppointmentsAsync(UserID, term);
                 return Ok(_mapper.Map<IEnumerable<AppointmentDto>>(appointments));
             }
             catch (Exception ex)
@@ -369,9 +396,9 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var UserID = GetCurrentUserID();
                 var hasConflict = await _appointmentService.CheckTimeConflictAsync(
-                    userId, conflictDto.StartDateTime, conflictDto.EndDateTime, conflictDto.ExcludeAppointmentId);
+                    UserID, conflictDto.StartDateTime, conflictDto.EndDateTime, conflictDto.ExcludeAppointmentID);
 
                 return Ok(new
                 {
@@ -404,6 +431,6 @@ namespace SphereScheduleAPI.API.Controllers
     {
         public DateTimeOffset StartDateTime { get; set; }
         public DateTimeOffset EndDateTime { get; set; }
-        public Guid? ExcludeAppointmentId { get; set; }
+        public Guid? ExcludeAppointmentID { get; set; }
     }
 }

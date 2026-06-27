@@ -5,7 +5,7 @@ namespace SphereScheduleAPI.Application.DTOs
     public class ActivityLogDto
     {
         public long LogId { get; set; }
-        public Guid? UserId { get; set; }
+        public Guid? UserID { get; set; }
         public string ActivityType { get; set; } = string.Empty;
         public string? EntityType { get; set; }
         public Guid? EntityId { get; set; }
@@ -24,7 +24,7 @@ namespace SphereScheduleAPI.Application.DTOs
     public class CreateActivityLogDto
     {
         [Required]
-        public Guid? UserId { get; set; }
+        public Guid? UserID { get; set; }
 
         [Required]
         [MaxLength(50)]
@@ -55,7 +55,7 @@ namespace SphereScheduleAPI.Application.DTOs
 
     public class ActivityLogFilterDto
     {
-        public Guid? UserId { get; set; }
+        public Guid? UserID { get; set; }
         public string? ActivityType { get; set; }
         public string? EntityType { get; set; }
         public Guid? EntityId { get; set; }
@@ -97,7 +97,7 @@ namespace SphereScheduleAPI.Application.DTOs
 
     public class UserActivitySummaryDto
     {
-        public Guid UserId { get; set; }
+        public Guid UserID { get; set; }
         public string UserEmail { get; set; } = string.Empty;
         public string UserDisplayName { get; set; } = string.Empty;
         public int TotalActivities { get; set; }

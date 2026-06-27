@@ -25,14 +25,14 @@ namespace SphereScheduleAPI.API.Controllers
         [ProducesResponseType(typeof(IEnumerable<ReminderDto>), 200)]
         public async Task<IActionResult> GetReminders([FromQuery] ReminderFilterDto filterDto)
         {
-            var userId = GetUserIdFromToken();
+            var UserID = GetUserIDFromToken();
 
-            if (filterDto.UserId.HasValue && filterDto.UserId.Value != userId)
+            if (filterDto.UserID.HasValue && filterDto.UserID.Value != UserID)
             {
                 return Forbid();
             }
 
-            filterDto.UserId = userId;
+            filterDto.UserID = UserID;
             var reminders = await _reminderService.GetRemindersByFilterAsync(filterDto);
             return Ok(reminders);
         }
@@ -44,8 +44,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             var reminder = await _reminderService.GetReminderByIdAsync(id);
 
-            var userId = GetUserIdFromToken();
-            if (reminder.UserId != userId)
+            var UserID = GetUserIDFromToken();
+            if (reminder.UserID != UserID)
             {
                 return Forbid();
             }
@@ -58,14 +58,14 @@ namespace SphereScheduleAPI.API.Controllers
         [ProducesResponseType(400)]
         public async Task<IActionResult> CreateReminder([FromBody] CreateReminderDto createDto)
         {
-            var userId = GetUserIdFromToken();
-            if (createDto.UserId != userId)
+            var UserID = GetUserIDFromToken();
+            if (createDto.UserID != UserID)
             {
                 return Forbid();
             }
 
             var reminder = await _reminderService.CreateReminderAsync(createDto);
-            return CreatedAtAction(nameof(GetReminderById), new { id = reminder.ReminderId }, reminder);
+            return CreatedAtAction(nameof(GetReminderById), new { id = reminder.ReminderID }, reminder);
         }
 
         [HttpPut("{id}")]
@@ -75,8 +75,8 @@ namespace SphereScheduleAPI.API.Controllers
         public async Task<IActionResult> UpdateReminder(Guid id, [FromBody] UpdateReminderDto updateDto)
         {
             var reminder = await _reminderService.GetReminderByIdAsync(id);
-            var userId = GetUserIdFromToken();
-            if (reminder.UserId != userId)
+            var UserID = GetUserIDFromToken();
+            if (reminder.UserID != UserID)
             {
                 return Forbid();
             }
@@ -91,8 +91,8 @@ namespace SphereScheduleAPI.API.Controllers
         public async Task<IActionResult> DeleteReminder(Guid id)
         {
             var reminder = await _reminderService.GetReminderByIdAsync(id);
-            var userId = GetUserIdFromToken();
-            if (reminder.UserId != userId)
+            var UserID = GetUserIDFromToken();
+            if (reminder.UserID != UserID)
             {
                 return Forbid();
             }
@@ -107,8 +107,8 @@ namespace SphereScheduleAPI.API.Controllers
         public async Task<IActionResult> MarkAsSent(Guid id)
         {
             var reminder = await _reminderService.GetReminderByIdAsync(id);
-            var userId = GetUserIdFromToken();
-            if (reminder.UserId != userId)
+            var UserID = GetUserIDFromToken();
+            if (reminder.UserID != UserID)
             {
                 return Forbid();
             }
@@ -124,8 +124,8 @@ namespace SphereScheduleAPI.API.Controllers
         public async Task<IActionResult> CancelReminder(Guid id)
         {
             var reminder = await _reminderService.GetReminderByIdAsync(id);
-            var userId = GetUserIdFromToken();
-            if (reminder.UserId != userId)
+            var UserID = GetUserIDFromToken();
+            if (reminder.UserID != UserID)
             {
                 return Forbid();
             }
@@ -141,8 +141,8 @@ namespace SphereScheduleAPI.API.Controllers
         public async Task<IActionResult> RescheduleReminder(Guid id, [FromBody] DateTimeOffset newDateTime)
         {
             var reminder = await _reminderService.GetReminderByIdAsync(id);
-            var userId = GetUserIdFromToken();
-            if (reminder.UserId != userId)
+            var UserID = GetUserIDFromToken();
+            if (reminder.UserID != UserID)
             {
                 return Forbid();
             }
@@ -163,23 +163,23 @@ namespace SphereScheduleAPI.API.Controllers
         [ProducesResponseType(typeof(object), 200)]
         public async Task<IActionResult> GetReminderStats()
         {
-            var userId = GetUserIdFromToken();
+            var UserID = GetUserIDFromToken();
 
-            var totalReminders = await _reminderService.GetReminderCountByUserAsync(userId);
-            var pendingReminders = await _reminderService.GetReminderCountByUserAsync(userId, "pending");
-            var sentReminders = await _reminderService.GetReminderCountByUserAsync(userId, "sent");
+            var totalReminders = await _reminderService.GetReminderCountByUserAsync(UserID);
+            var pendingReminders = await _reminderService.GetReminderCountByUserAsync(UserID, "pending");
+            var sentReminders = await _reminderService.GetReminderCountByUserAsync(UserID, "sent");
 
             return Ok(new
             {
                 Total = totalReminders,
                 Pending = pendingReminders,
                 Sent = sentReminders,
-                Cancelled = await _reminderService.GetReminderCountByUserAsync(userId, "cancelled"),
-                Failed = await _reminderService.GetReminderCountByUserAsync(userId, "failed")
+                Cancelled = await _reminderService.GetReminderCountByUserAsync(UserID, "cancelled"),
+                Failed = await _reminderService.GetReminderCountByUserAsync(UserID, "failed")
             });
         }
 
-        private Guid GetUserIdFromToken()
+        private Guid GetUserIDFromToken()
         {
             // For now, return a demo user ID
             // In production, implement proper JWT token extraction

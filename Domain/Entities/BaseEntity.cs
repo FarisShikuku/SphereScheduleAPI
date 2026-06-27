@@ -5,5 +5,7 @@
         public DateTimeOffset CreatedAt { get; set; }
         public DateTimeOffset UpdatedAt { get; set; }
         public bool IsDeleted { get; set; } = false;
+
+        public DateTimeOffset? DeletedAt { get; set; }
     }
 }

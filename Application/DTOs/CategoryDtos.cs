@@ -5,8 +5,8 @@ namespace SphereScheduleAPI.Application.DTOs
 {
     public class CategoryDto
     {
-        public Guid CategoryId { get; set; }
-        public Guid UserId { get; set; }
+        public Guid CategoryID { get; set; }
+        public Guid UserID { get; set; }
         public string CategoryName { get; set; }
         public string CategoryType { get; set; }
         public string Description { get; set; }

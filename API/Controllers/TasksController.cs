@@ -29,14 +29,14 @@ namespace SphereScheduleAPI.API.Controllers
             _mapper = mapper;
         }
 
-        private Guid GetCurrentUserId()
+        private Guid GetCurrentUserID()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            var UserIDClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(UserIDClaim) || !Guid.TryParse(UserIDClaim, out var UserID))
             {
                 throw new UnauthorizedAccessException("Invalid user ID in token");
             }
-            return userId;
+            return UserID;
         }
 
         // GET: api/tasks
@@ -47,8 +47,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var tasks = await _taskService.GetUserTasksAsync(userId, startDate, endDate);
+                var UserID = GetCurrentUserID();
+                var tasks = await _taskService.GetUserTasksAsync(UserID, startDate, endDate);
                 return Ok(_mapper.Map<IEnumerable<TaskDto>>(tasks));
             }
             catch (Exception ex)
@@ -68,8 +68,8 @@ namespace SphereScheduleAPI.API.Controllers
                     return NotFound(new { message = $"Task with ID {id} not found" });
 
                 // Check ownership
-                var userId = GetCurrentUserId();
-                if (task.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (task.UserID != UserID)
                     return Forbid();
 
                 return Ok(_mapper.Map<TaskDto>(task));
@@ -84,13 +84,18 @@ namespace SphereScheduleAPI.API.Controllers
         [HttpPost]
         public async Task<ActionResult<TaskDto>> CreateTask([FromBody] CreateTaskDto createDto)
         {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                return BadRequest(new { message = "Validation failed", errors = errors });
+            }
             try
             {
-                var userId = GetCurrentUserId();
+                var UserID = GetCurrentUserID();
 
                 // Map DTO to entity
                 var task = _mapper.Map<TaskEntity>(createDto);
-                task.UserId = userId;
+                task.UserID = UserID;
                 task.Status = "pending";
                 task.CompletionPercentage = 0;
 
@@ -102,7 +107,7 @@ namespace SphereScheduleAPI.API.Controllers
 
                 var created = await _taskService.CreateTaskAsync(task);
                 return CreatedAtAction(nameof(GetTask),
-                    new { id = created.TaskId },
+                    new { id = created.TaskID },
                     _mapper.Map<TaskDto>(created));
             }
             catch (Exception ex)
@@ -122,8 +127,8 @@ namespace SphereScheduleAPI.API.Controllers
                     return NotFound(new { message = $"Task with ID {id} not found" });
 
                 // Check ownership
-                var userId = GetCurrentUserId();
-                if (existing.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (existing.UserID != UserID)
                     return Forbid();
 
                 // Map updates
@@ -156,8 +161,8 @@ namespace SphereScheduleAPI.API.Controllers
                     return NotFound(new { message = $"Task with ID {id} not found" });
 
                 // Check ownership
-                var userId = GetCurrentUserId();
-                if (existing.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (existing.UserID != UserID)
                     return Forbid();
 
                 var success = await _taskService.DeleteTaskAsync(id);
@@ -178,8 +183,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var tasks = await _taskService.GetOverdueTasksAsync(userId);
+                var UserID = GetCurrentUserID();
+                var tasks = await _taskService.GetOverdueTasksAsync(UserID);
                 return Ok(_mapper.Map<IEnumerable<TaskDto>>(tasks));
             }
             catch (Exception ex)
@@ -194,8 +199,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var tasks = await _taskService.GetTodayTasksAsync(userId);
+                var UserID = GetCurrentUserID();
+                var tasks = await _taskService.GetTodayTasksAsync(UserID);
                 return Ok(_mapper.Map<IEnumerable<TaskDto>>(tasks));
             }
             catch (Exception ex)
@@ -210,8 +215,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var tasks = await _taskService.GetUpcomingTasksAsync(userId, daysAhead);
+                var UserID = GetCurrentUserID();
+                var tasks = await _taskService.GetUpcomingTasksAsync(UserID, daysAhead);
                 return Ok(_mapper.Map<IEnumerable<TaskDto>>(tasks));
             }
             catch (Exception ex)
@@ -226,8 +231,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var tasks = await _taskService.GetTasksByStatusAsync(userId, status);
+                var UserID = GetCurrentUserID();
+                var tasks = await _taskService.GetTasksByStatusAsync(UserID, status);
                 return Ok(_mapper.Map<IEnumerable<TaskDto>>(tasks));
             }
             catch (Exception ex)
@@ -242,8 +247,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var tasks = await _taskService.GetTasksByPriorityAsync(userId, priority);
+                var UserID = GetCurrentUserID();
+                var tasks = await _taskService.GetTasksByPriorityAsync(UserID, priority);
                 return Ok(_mapper.Map<IEnumerable<TaskDto>>(tasks));
             }
             catch (Exception ex)
@@ -258,8 +263,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var tasks = await _taskService.GetTasksByCategoryAsync(userId, category);
+                var UserID = GetCurrentUserID();
+                var tasks = await _taskService.GetTasksByCategoryAsync(UserID, category);
                 return Ok(_mapper.Map<IEnumerable<TaskDto>>(tasks));
             }
             catch (Exception ex)
@@ -274,8 +279,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var tasks = await _taskService.GetTasksByTypeAsync(userId, type);
+                var UserID = GetCurrentUserID();
+                var tasks = await _taskService.GetTasksByTypeAsync(UserID, type);
                 return Ok(_mapper.Map<IEnumerable<TaskDto>>(tasks));
             }
             catch (Exception ex)
@@ -292,8 +297,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var tasks = await _taskService.GetTasksByDateRangeAsync(userId, startDate, endDate);
+                var UserID = GetCurrentUserID();
+                var tasks = await _taskService.GetTasksByDateRangeAsync(UserID, startDate, endDate);
                 return Ok(_mapper.Map<IEnumerable<TaskDto>>(tasks));
             }
             catch (Exception ex)
@@ -310,10 +315,10 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var stats = await _taskService.GetTaskStatisticsAsync(userId, startDate, endDate);
-                var completionStats = await _taskService.GetTaskCompletionStatsAsync(userId, startDate, endDate);
-                var count = await _taskService.GetTaskCountByUserAsync(userId);
+                var UserID = GetCurrentUserID();
+                var stats = await _taskService.GetTaskStatisticsAsync(UserID, startDate, endDate);
+                var completionStats = await _taskService.GetTaskCompletionStatsAsync(UserID, startDate, endDate);
+                var count = await _taskService.GetTaskCountByUserAsync(UserID);
 
                 return Ok(new
                 {
@@ -344,8 +349,8 @@ namespace SphereScheduleAPI.API.Controllers
                     return NotFound(new { message = $"Task with ID {id} not found" });
 
                 // Check ownership
-                var userId = GetCurrentUserId();
-                if (existing.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (existing.UserID != UserID)
                     return Forbid();
 
                 var success = await _taskService.ChangeTaskStatusAsync(id, statusDto.NewStatus, statusDto.CompletionPercentage);
@@ -371,8 +376,8 @@ namespace SphereScheduleAPI.API.Controllers
                     return NotFound(new { message = $"Task with ID {id} not found" });
 
                 // Check ownership
-                var userId = GetCurrentUserId();
-                if (existing.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (existing.UserID != UserID)
                     return Forbid();
 
                 var success = await _taskService.UpdateTaskProgressAsync(id, progressDto.ProgressPercentage);
@@ -402,8 +407,8 @@ namespace SphereScheduleAPI.API.Controllers
                     return NotFound(new { message = $"Task with ID {id} not found" });
 
                 // Check ownership
-                var userId = GetCurrentUserId();
-                if (existing.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (existing.UserID != UserID)
                     return Forbid();
 
                 if (timeSpentDto.Minutes <= 0)
@@ -432,8 +437,8 @@ namespace SphereScheduleAPI.API.Controllers
                     return NotFound(new { message = $"Task with ID {id} not found" });
 
                 // Check ownership
-                var userId = GetCurrentUserId();
-                if (existing.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (existing.UserID != UserID)
                     return Forbid();
 
                 var duplicated = await _taskService.DuplicateTaskAsync(id);
@@ -454,8 +459,8 @@ namespace SphereScheduleAPI.API.Controllers
                 if (string.IsNullOrWhiteSpace(term))
                     return BadRequest(new { message = "Search term is required" });
 
-                var userId = GetCurrentUserId();
-                var tasks = await _taskService.SearchTasksAsync(userId, term);
+                var UserID = GetCurrentUserID();
+                var tasks = await _taskService.SearchTasksAsync(UserID, term);
                 return Ok(_mapper.Map<IEnumerable<TaskDto>>(tasks));
             }
             catch (Exception ex)
@@ -470,8 +475,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var tasks = await _taskService.GetTasksByTagsAsync(userId, tags);
+                var UserID = GetCurrentUserID();
+                var tasks = await _taskService.GetTasksByTagsAsync(UserID, tags);
                 return Ok(_mapper.Map<IEnumerable<TaskDto>>(tasks));
             }
             catch (Exception ex)
@@ -482,23 +487,23 @@ namespace SphereScheduleAPI.API.Controllers
 
         // POST: api/tasks/bulk/complete
         [HttpPost("bulk/complete")]
-        public async Task<ActionResult> CompleteMultipleTasks([FromBody] Guid[] taskIds)
+        public async Task<ActionResult> CompleteMultipleTasks([FromBody] Guid[] TaskIDs)
         {
             try
             {
-                if (taskIds == null || taskIds.Length == 0)
+                if (TaskIDs == null || TaskIDs.Length == 0)
                     return BadRequest(new { message = "No task IDs provided" });
 
-                var userId = GetCurrentUserId();
+                var UserID = GetCurrentUserID();
 
                 // Verify all tasks belong to user
-                var tasks = await _taskService.GetUserTasksAsync(userId);
-                var userTaskIds = tasks.Select(t => t.TaskId).ToHashSet();
+                var tasks = await _taskService.GetUserTasksAsync(UserID);
+                var userTaskIDs = tasks.Select(t => t.TaskID).ToHashSet();
 
-                if (taskIds.Any(id => !userTaskIds.Contains(id)))
+                if (TaskIDs.Any(id => !userTaskIDs.Contains(id)))
                     return Forbid();
 
-                var success = await _taskService.CompleteMultipleTasksAsync(taskIds);
+                var success = await _taskService.CompleteMultipleTasksAsync(TaskIDs);
                 if (!success)
                     return StatusCode(500, new { message = "Failed to complete tasks" });
 
@@ -512,23 +517,23 @@ namespace SphereScheduleAPI.API.Controllers
 
         // POST: api/tasks/bulk/delete
         [HttpPost("bulk/delete")]
-        public async Task<ActionResult> DeleteMultipleTasks([FromBody] Guid[] taskIds)
+        public async Task<ActionResult> DeleteMultipleTasks([FromBody] Guid[] TaskIDs)
         {
             try
             {
-                if (taskIds == null || taskIds.Length == 0)
+                if (TaskIDs == null || TaskIDs.Length == 0)
                     return BadRequest(new { message = "No task IDs provided" });
 
-                var userId = GetCurrentUserId();
+                var UserID = GetCurrentUserID();
 
                 // Verify all tasks belong to user
-                var tasks = await _taskService.GetUserTasksAsync(userId);
-                var userTaskIds = tasks.Select(t => t.TaskId).ToHashSet();
+                var tasks = await _taskService.GetUserTasksAsync(UserID);
+                var userTaskIDs = tasks.Select(t => t.TaskID).ToHashSet();
 
-                if (taskIds.Any(id => !userTaskIds.Contains(id)))
+                if (TaskIDs.Any(id => !userTaskIDs.Contains(id)))
                     return Forbid();
 
-                var success = await _taskService.DeleteMultipleTasksAsync(taskIds);
+                var success = await _taskService.DeleteMultipleTasksAsync(TaskIDs);
                 if (!success)
                     return StatusCode(500, new { message = "Failed to delete tasks" });
 
@@ -546,22 +551,22 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                if (priorityDto.TaskIds == null || priorityDto.TaskIds.Length == 0)
+                if (priorityDto.TaskIDs == null || priorityDto.TaskIDs.Length == 0)
                     return BadRequest(new { message = "No task IDs provided" });
 
                 if (string.IsNullOrEmpty(priorityDto.NewPriority))
                     return BadRequest(new { message = "New priority is required" });
 
-                var userId = GetCurrentUserId();
+                var UserID = GetCurrentUserID();
 
                 // Verify all tasks belong to user
-                var tasks = await _taskService.GetUserTasksAsync(userId);
-                var userTaskIds = tasks.Select(t => t.TaskId).ToHashSet();
+                var tasks = await _taskService.GetUserTasksAsync(UserID);
+                var userTaskIDs = tasks.Select(t => t.TaskID).ToHashSet();
 
-                if (priorityDto.TaskIds.Any(id => !userTaskIds.Contains(id)))
+                if (priorityDto.TaskIDs.Any(id => !userTaskIDs.Contains(id)))
                     return Forbid();
 
-                var success = await _taskService.ChangeMultipleTasksPriorityAsync(priorityDto.TaskIds, priorityDto.NewPriority);
+                var success = await _taskService.ChangeMultipleTasksPriorityAsync(priorityDto.TaskIDs, priorityDto.NewPriority);
                 if (!success)
                     return StatusCode(500, new { message = "Failed to change task priorities" });
 
@@ -584,8 +589,8 @@ namespace SphereScheduleAPI.API.Controllers
                     return NotFound(new { message = $"Task with ID {id} not found" });
 
                 // Check ownership
-                var userId = GetCurrentUserId();
-                if (task.UserId != userId)
+                var UserID = GetCurrentUserID();
+                if (task.UserID != UserID)
                     return Forbid();
 
                 var subtasks = await _taskService.GetTaskSubtasksAsync(id);
@@ -621,7 +626,7 @@ namespace SphereScheduleAPI.API.Controllers
 
     public class BulkPriorityChangeDto
     {
-        public Guid[] TaskIds { get; set; }
+        public Guid[] TaskIDs { get; set; }
         public string NewPriority { get; set; }
     }
 }

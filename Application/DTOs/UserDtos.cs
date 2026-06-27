@@ -5,7 +5,7 @@ namespace SphereScheduleAPI.Application.DTOs
 {
     public class UserDto
     {
-        public Guid UserId { get; set; }
+        public Guid UserID { get; set; }
         public string Email { get; set; }
         public string Username { get; set; }
         public string DisplayName { get; set; }
@@ -253,7 +253,7 @@ namespace SphereScheduleAPI.Application.DTOs
     public class BulkUserActionDto
     {
         [Required]
-        public Guid[] UserIds { get; set; }
+        public Guid[] UserIDs { get; set; }
     }
 
     public class BulkNotificationDto : BulkUserActionDto
@@ -265,13 +265,13 @@ namespace SphereScheduleAPI.Application.DTOs
 
     public class ExportUsersDto
     {
-        public Guid[] UserIds { get; set; }
+        public Guid[] UserIDs { get; set; }
         public string Format { get; set; } = "csv";
     }
 
     public class CheckAvailabilityDto
     {
         public string Value { get; set; }
-        public Guid? ExcludeUserId { get; set; }
+        public Guid? ExcludeUserID { get; set; }
     }
 }

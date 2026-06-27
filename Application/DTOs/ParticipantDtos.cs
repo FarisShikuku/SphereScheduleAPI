@@ -4,9 +4,9 @@ namespace SphereScheduleAPI.Application.DTOs
 {
     public class ParticipantDto
     {
-        public Guid ParticipantId { get; set; }
-        public Guid AppointmentId { get; set; }
-        public Guid? UserId { get; set; }
+        public Guid ParticipantID { get; set; }
+        public Guid AppointmentID { get; set; }
+        public Guid? UserID { get; set; }
         public string Email { get; set; } = string.Empty;
         public string? FullName { get; set; }
         public string InvitationStatus { get; set; } = "pending";
@@ -42,7 +42,7 @@ namespace SphereScheduleAPI.Application.DTOs
         [RegularExpression("^(organizer|attendee|optional)$", ErrorMessage = "Invalid participant role")]
         public string? ParticipantRole { get; set; } = "attendee";
 
-        public Guid? UserId { get; set; }
+        public Guid? UserID { get; set; }
     }
 
     public class UpdateParticipantDto
@@ -60,7 +60,7 @@ namespace SphereScheduleAPI.Application.DTOs
         [RegularExpression("^(organizer|attendee|optional)$", ErrorMessage = "Invalid participant role")]
         public string? ParticipantRole { get; set; }
 
-        public Guid? UserId { get; set; }
+        public Guid? UserID { get; set; }
     }
 
     public class UpdateParticipantStatusDto
@@ -76,7 +76,7 @@ namespace SphereScheduleAPI.Application.DTOs
     public class BulkAddParticipantsDto
     {
         [Required]
-        public Guid AppointmentId { get; set; }
+        public Guid AppointmentID { get; set; }
 
         [Required]
         [MinLength(1, ErrorMessage = "At least one participant is required")]
@@ -87,8 +87,8 @@ namespace SphereScheduleAPI.Application.DTOs
 
     public class ParticipantFilterDto
     {
-        public Guid? AppointmentId { get; set; }
-        public Guid? UserId { get; set; }
+        public Guid? AppointmentID { get; set; }
+        public Guid? UserID { get; set; }
         public string? Email { get; set; }
         public string? InvitationStatus { get; set; }
         public string? ParticipantRole { get; set; }

@@ -4,22 +4,22 @@ namespace SphereScheduleAPI.Application.Interfaces
 {
     public interface IParticipantService
     {
-        Task<ParticipantDto> CreateParticipantAsync(Guid appointmentId, CreateParticipantDto createDto);
+        Task<ParticipantDto> CreateParticipantAsync(Guid AppointmentID, CreateParticipantDto createDto);
         Task<IEnumerable<ParticipantDto>> CreateParticipantsBulkAsync(BulkAddParticipantsDto bulkDto);
-        Task<ParticipantDto> GetParticipantByIdAsync(Guid participantId, bool includeDetails = false);
-        Task<ParticipantDto> GetParticipantByEmailAsync(Guid appointmentId, string email);
-        Task<IEnumerable<ParticipantDto>> GetParticipantsByAppointmentIdAsync(Guid appointmentId, ParticipantFilterDto filterDto);
+        Task<ParticipantDto> GetParticipantByIdAsync(Guid ParticipantID, bool includeDetails = false);
+        Task<ParticipantDto> GetParticipantByEmailAsync(Guid AppointmentID, string email);
+        Task<IEnumerable<ParticipantDto>> GetParticipantsByAppointmentIDAsync(Guid AppointmentID, ParticipantFilterDto filterDto);
         Task<IEnumerable<ParticipantDto>> GetParticipantsByFilterAsync(ParticipantFilterDto filterDto);
-        Task<IEnumerable<ParticipantDto>> GetInvitationsByUserAsync(Guid userId, ParticipantFilterDto filterDto);
-        Task<ParticipantDto> UpdateParticipantAsync(Guid participantId, UpdateParticipantDto updateDto);
-        Task<ParticipantDto> UpdateParticipantStatusAsync(Guid participantId, UpdateParticipantStatusDto statusDto);
-        Task<bool> DeleteParticipantAsync(Guid participantId);
-        Task<bool> DeleteParticipantsByAppointmentAsync(Guid appointmentId);
-        Task<int> GetParticipantCountByAppointmentAsync(Guid appointmentId, string? status = null);
-        Task<ParticipantStatisticsDto> GetParticipantStatisticsAsync(Guid appointmentId);
-        Task<bool> ResendInvitationAsync(Guid participantId);
-        Task<bool> CheckIfUserIsParticipantAsync(Guid appointmentId, Guid userId);
-        Task<bool> CheckIfEmailIsParticipantAsync(Guid appointmentId, string email);
-        Task<IEnumerable<ParticipantDto>> SearchParticipantsAsync(string searchTerm, Guid? appointmentId = null);
+        Task<IEnumerable<ParticipantDto>> GetInvitationsByUserAsync(Guid UserID, ParticipantFilterDto filterDto);
+        Task<ParticipantDto> UpdateParticipantAsync(Guid ParticipantID, UpdateParticipantDto updateDto);
+        Task<ParticipantDto> UpdateParticipantStatusAsync(Guid ParticipantID, UpdateParticipantStatusDto statusDto);
+        Task<bool> DeleteParticipantAsync(Guid ParticipantID);
+        Task<bool> DeleteParticipantsByAppointmentAsync(Guid AppointmentID);
+        Task<int> GetParticipantCountByAppointmentAsync(Guid AppointmentID, string? status = null);
+        Task<ParticipantStatisticsDto> GetParticipantStatisticsAsync(Guid AppointmentID);
+        Task<bool> ResendInvitationAsync(Guid ParticipantID);
+        Task<bool> CheckIfUserIsParticipantAsync(Guid AppointmentID, Guid UserID);
+        Task<bool> CheckIfEmailIsParticipantAsync(Guid AppointmentID, string email);
+        Task<IEnumerable<ParticipantDto>> SearchParticipantsAsync(string searchTerm, Guid? AppointmentID = null);
     }
 }

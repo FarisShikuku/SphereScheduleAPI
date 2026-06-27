@@ -9,43 +9,43 @@ namespace SphereScheduleAPI.Application.Interfaces
     public interface ICategoryService
     {
         // Basic CRUD
-        Task<Category> GetCategoryByIdAsync(Guid categoryId);
-        Task<IEnumerable<Category>> GetUserCategoriesAsync(Guid userId);
+        Task<Category> GetCategoryByIdAsync(Guid CategoryID);
+        Task<IEnumerable<Category>> GetUserCategoriesAsync(Guid UserID);
         Task<Category> CreateCategoryAsync(Category category);
         Task<Category> UpdateCategoryAsync(Category category);
-        Task<bool> DeleteCategoryAsync(Guid categoryId);
-        Task<bool> RestoreCategoryAsync(Guid categoryId);
+        Task<bool> DeleteCategoryAsync(Guid CategoryID);
+        Task<bool> RestoreCategoryAsync(Guid CategoryID);
 
         // Query operations
-        Task<IEnumerable<Category>> GetCategoriesByTypeAsync(Guid userId, string categoryType);
-        Task<Category> GetDefaultCategoryAsync(Guid userId);
-        Task<IEnumerable<Category>> GetCategoriesWithTaskCountAsync(Guid userId);
-        Task<Category> GetCategoryByNameAsync(Guid userId, string categoryName);
+        Task<IEnumerable<Category>> GetCategoriesByTypeAsync(Guid UserID, string categoryType);
+        Task<Category> GetDefaultCategoryAsync(Guid UserID);
+        Task<IEnumerable<Category>> GetCategoriesWithTaskCountAsync(Guid UserID);
+        Task<Category> GetCategoryByNameAsync(Guid UserID, string categoryName);
 
         // Category management
-        Task<bool> SetDefaultCategoryAsync(Guid categoryId);
-        Task<bool> UpdateCategoryOrderAsync(Guid categoryId, int newOrder);
-        Task<bool> ReorderCategoriesAsync(Guid userId, Dictionary<Guid, int> categoryOrders);
-        Task<bool> UpdateCategoryColorAsync(Guid categoryId, string colorCode);
-        Task<bool> UpdateCategoryIconAsync(Guid categoryId, string iconName);
+        Task<bool> SetDefaultCategoryAsync(Guid CategoryID);
+        Task<bool> UpdateCategoryOrderAsync(Guid CategoryID, int newOrder);
+        Task<bool> ReorderCategoriesAsync(Guid UserID, Dictionary<Guid, int> categoryOrders);
+        Task<bool> UpdateCategoryColorAsync(Guid CategoryID, string colorCode);
+        Task<bool> UpdateCategoryIconAsync(Guid CategoryID, string iconName);
 
         // Statistics
-        Task<int> GetCategoryCountByUserAsync(Guid userId);
-        Task<Dictionary<string, int>> GetCategoryUsageStatisticsAsync(Guid userId);
-        Task<Category> GetMostUsedCategoryAsync(Guid userId);
-        Task<IEnumerable<Category>> GetUnusedCategoriesAsync(Guid userId, int daysThreshold = 30);
+        Task<int> GetCategoryCountByUserAsync(Guid UserID);
+        Task<Dictionary<string, int>> GetCategoryUsageStatisticsAsync(Guid UserID);
+        Task<Category> GetMostUsedCategoryAsync(Guid UserID);
+        Task<IEnumerable<Category>> GetUnusedCategoriesAsync(Guid UserID, int daysThreshold = 30);
 
         // Bulk operations
-        Task<bool> DeleteMultipleCategoriesAsync(Guid[] categoryIds);
-        Task<bool> UpdateMultipleCategoriesAsync(Guid[] categoryIds, Action<Category> updateAction);
+        Task<bool> DeleteMultipleCategoriesAsync(Guid[] CategoryIDs);
+        Task<bool> UpdateMultipleCategoriesAsync(Guid[] CategoryIDs, Action<Category> updateAction);
 
         // System categories
         Task<IEnumerable<Category>> GetSystemCategoriesAsync();
-        Task<bool> InitializeDefaultCategoriesAsync(Guid userId);
-        Task<bool> ResetToDefaultCategoriesAsync(Guid userId);
+        Task<bool> InitializeDefaultCategoriesAsync(Guid UserID);
+        Task<bool> ResetToDefaultCategoriesAsync(Guid UserID);
 
         // Validation
-        Task<bool> CategoryNameExistsAsync(Guid userId, string categoryName, Guid? excludeCategoryId = null);
-        Task<bool> CanDeleteCategoryAsync(Guid categoryId); // Check if category has associated tasks
+        Task<bool> CategoryNameExistsAsync(Guid UserID, string categoryName, Guid? excludeCategoryID = null);
+        Task<bool> CanDeleteCategoryAsync(Guid CategoryID); // Check if category has associated tasks
     }
 }

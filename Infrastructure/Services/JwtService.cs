@@ -23,16 +23,16 @@ namespace SphereScheduleAPI.Infrastructure.Services
             _expirationMinutes = int.Parse(_configuration["Jwt:ExpirationMinutes"] ?? "1440"); // 24 hours default
         }
 
-        public string GenerateToken(Guid userId, string email, string username, List<string> roles)
+        public string GenerateToken(Guid UserID, string email, string username, List<string> roles)
         {
             var claims = new[]
             {
-                new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
+                new Claim(JwtRegisteredClaimNames.Sub, UserID.ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, email),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim(ClaimTypes.Name, username),
-                new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-                new Claim("userId", userId.ToString())
+                new Claim(ClaimTypes.NameIdentifier, UserID.ToString()),
+                new Claim("UserID", UserID.ToString())
             };
 
             // Add role claims
@@ -80,15 +80,15 @@ namespace SphereScheduleAPI.Infrastructure.Services
             }
         }
 
-        public Guid? GetUserIdFromToken(string token)
+        public Guid? GetUserIDFromToken(string token)
         {
             var principal = ValidateToken(token);
-            var userIdClaim = principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                           ?? principal?.FindFirst("userId")?.Value;
+            var UserIDClaim = principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                           ?? principal?.FindFirst("UserID")?.Value;
 
-            if (Guid.TryParse(userIdClaim, out var userId))
+            if (Guid.TryParse(UserIDClaim, out var UserID))
             {
-                return userId;
+                return UserID;
             }
 
             return null;

@@ -18,19 +18,19 @@ namespace SphereScheduleAPI.Application.Services
             _context = context;
         }
 
-        public async Task<Appointment> GetAppointmentByIdAsync(Guid appointmentId)
+        public async Task<Appointment> GetAppointmentByIdAsync(Guid AppointmentID)
         {
             return await _context.Appointments
                 .Include(a => a.Participants)
                 .Include(a => a.Reminders)
-                .FirstOrDefaultAsync(a => a.AppointmentId == appointmentId && !a.IsDeleted);
+                .FirstOrDefaultAsync(a => a.AppointmentID == AppointmentID && !a.IsDeleted);
         }
 
-        public async Task<IEnumerable<Appointment>> GetUserAppointmentsAsync(Guid userId, DateTimeOffset? startDate = null, DateTimeOffset? endDate = null)
+        public async Task<IEnumerable<Appointment>> GetUserAppointmentsAsync(Guid UserID, DateTimeOffset? startDate = null, DateTimeOffset? endDate = null)
         {
             var query = _context.Appointments
                 .Include(a => a.Participants)
-                .Where(a => a.UserId == userId && !a.IsDeleted);
+                .Where(a => a.UserID == UserID && !a.IsDeleted);
 
             if (startDate.HasValue)
                 query = query.Where(a => a.StartDateTime >= startDate);
@@ -46,12 +46,12 @@ namespace SphereScheduleAPI.Application.Services
         public async Task<Appointment> CreateAppointmentAsync(Appointment appointment)
         {
             // Validate time conflict
-            if (await CheckTimeConflictAsync(appointment.UserId, appointment.StartDateTime, appointment.EndDateTime))
+            if (await CheckTimeConflictAsync(appointment.UserID, appointment.StartDateTime, appointment.EndDateTime))
             {
                 throw new InvalidOperationException("Time conflict with existing appointment");
             }
 
-            appointment.AppointmentId = Guid.NewGuid();
+            appointment.AppointmentID = Guid.NewGuid();
             appointment.CreatedAt = DateTimeOffset.UtcNow;
             appointment.UpdatedAt = DateTimeOffset.UtcNow;
             appointment.IsDeleted = false;
@@ -65,12 +65,12 @@ namespace SphereScheduleAPI.Application.Services
         public async Task<Appointment> UpdateAppointmentAsync(Appointment appointment)
         {
             // Check if appointment exists
-            var existing = await GetAppointmentByIdAsync(appointment.AppointmentId);
+            var existing = await GetAppointmentByIdAsync(appointment.AppointmentID);
             if (existing == null)
-                throw new KeyNotFoundException($"Appointment with ID {appointment.AppointmentId} not found");
+                throw new KeyNotFoundException($"Appointment with ID {appointment.AppointmentID} not found");
 
             // Validate time conflict (excluding current appointment)
-            if (await CheckTimeConflictAsync(appointment.UserId, appointment.StartDateTime, appointment.EndDateTime, appointment.AppointmentId))
+            if (await CheckTimeConflictAsync(appointment.UserID, appointment.StartDateTime, appointment.EndDateTime, appointment.AppointmentID))
             {
                 throw new InvalidOperationException("Time conflict with existing appointment");
             }
@@ -81,9 +81,9 @@ namespace SphereScheduleAPI.Application.Services
             return appointment;
         }
 
-        public async Task<bool> DeleteAppointmentAsync(Guid appointmentId)
+        public async Task<bool> DeleteAppointmentAsync(Guid AppointmentID)
         {
-            var appointment = await GetAppointmentByIdAsync(appointmentId);
+            var appointment = await GetAppointmentByIdAsync(AppointmentID);
             if (appointment == null) return false;
 
             appointment.IsDeleted = true;
@@ -94,11 +94,11 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<IEnumerable<Appointment>> GetAppointmentsByDateRangeAsync(Guid userId, DateTimeOffset startDate, DateTimeOffset endDate)
+        public async Task<IEnumerable<Appointment>> GetAppointmentsByDateRangeAsync(Guid UserID, DateTimeOffset startDate, DateTimeOffset endDate)
         {
             return await _context.Appointments
                 .Include(a => a.Participants)
-                .Where(a => a.UserId == userId &&
+                .Where(a => a.UserID == UserID &&
                            !a.IsDeleted &&
                            a.StartDateTime >= startDate &&
                            a.EndDateTime <= endDate)
@@ -106,14 +106,14 @@ namespace SphereScheduleAPI.Application.Services
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<Appointment>> GetUpcomingAppointmentsAsync(Guid userId, int daysAhead = 7)
+        public async Task<IEnumerable<Appointment>> GetUpcomingAppointmentsAsync(Guid UserID, int daysAhead = 7)
         {
             var now = DateTimeOffset.UtcNow;
             var futureDate = now.AddDays(daysAhead);
 
             return await _context.Appointments
                 .Include(a => a.Participants)
-                .Where(a => a.UserId == userId &&
+                .Where(a => a.UserID == UserID &&
                            !a.IsDeleted &&
                            a.Status == "scheduled" &&
                            a.StartDateTime >= now &&
@@ -122,38 +122,38 @@ namespace SphereScheduleAPI.Application.Services
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<Appointment>> GetAppointmentsByStatusAsync(Guid userId, string status)
+        public async Task<IEnumerable<Appointment>> GetAppointmentsByStatusAsync(Guid UserID, string status)
         {
             return await _context.Appointments
                 .Include(a => a.Participants)
-                .Where(a => a.UserId == userId &&
+                .Where(a => a.UserID == UserID &&
                            !a.IsDeleted &&
                            a.Status == status)
                 .OrderBy(a => a.StartDateTime)
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<Appointment>> GetAppointmentsByTypeAsync(Guid userId, string appointmentType)
+        public async Task<IEnumerable<Appointment>> GetAppointmentsByTypeAsync(Guid UserID, string appointmentType)
         {
             return await _context.Appointments
                 .Include(a => a.Participants)
-                .Where(a => a.UserId == userId &&
+                .Where(a => a.UserID == UserID &&
                            !a.IsDeleted &&
                            a.AppointmentType == appointmentType)
                 .OrderBy(a => a.StartDateTime)
                 .ToListAsync();
         }
 
-        public async Task<int> GetAppointmentCountByUserAsync(Guid userId)
+        public async Task<int> GetAppointmentCountByUserAsync(Guid UserID)
         {
             return await _context.Appointments
-                .CountAsync(a => a.UserId == userId && !a.IsDeleted);
+                .CountAsync(a => a.UserID == UserID && !a.IsDeleted);
         }
 
-        public async Task<Dictionary<string, int>> GetAppointmentStatisticsAsync(Guid userId, DateTimeOffset? startDate = null, DateTimeOffset? endDate = null)
+        public async Task<Dictionary<string, int>> GetAppointmentStatisticsAsync(Guid UserID, DateTimeOffset? startDate = null, DateTimeOffset? endDate = null)
         {
             var query = _context.Appointments
-                .Where(a => a.UserId == userId && !a.IsDeleted);
+                .Where(a => a.UserID == UserID && !a.IsDeleted);
 
             if (startDate.HasValue)
                 query = query.Where(a => a.StartDateTime >= startDate);
@@ -175,9 +175,9 @@ namespace SphereScheduleAPI.Application.Services
             };
         }
 
-        public async Task<bool> ChangeAppointmentStatusAsync(Guid appointmentId, string newStatus)
+        public async Task<bool> ChangeAppointmentStatusAsync(Guid AppointmentID, string newStatus)
         {
-            var appointment = await GetAppointmentByIdAsync(appointmentId);
+            var appointment = await GetAppointmentByIdAsync(AppointmentID);
             if (appointment == null) return false;
 
             appointment.Status = newStatus;
@@ -187,14 +187,14 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<Appointment> RescheduleAppointmentAsync(Guid appointmentId, DateTimeOffset newStart, DateTimeOffset newEnd)
+        public async Task<Appointment> RescheduleAppointmentAsync(Guid AppointmentID, DateTimeOffset newStart, DateTimeOffset newEnd)
         {
-            var appointment = await GetAppointmentByIdAsync(appointmentId);
+            var appointment = await GetAppointmentByIdAsync(AppointmentID);
             if (appointment == null)
-                throw new KeyNotFoundException($"Appointment with ID {appointmentId} not found");
+                throw new KeyNotFoundException($"Appointment with ID {AppointmentID} not found");
 
             // Validate time conflict
-            if (await CheckTimeConflictAsync(appointment.UserId, newStart, newEnd, appointmentId))
+            if (await CheckTimeConflictAsync(appointment.UserID, newStart, newEnd, AppointmentID))
             {
                 throw new InvalidOperationException("Time conflict with existing appointment");
             }
@@ -207,15 +207,15 @@ namespace SphereScheduleAPI.Application.Services
             return appointment;
         }
 
-        public async Task<bool> AddParticipantToAppointmentAsync(Guid appointmentId, Guid participantId)
+        public async Task<bool> AddParticipantToAppointmentAsync(Guid AppointmentID, Guid ParticipantID)
         {
-            var appointment = await GetAppointmentByIdAsync(appointmentId);
+            var appointment = await GetAppointmentByIdAsync(AppointmentID);
             if (appointment == null) return false;
 
-            var participant = await _context.Participants.FindAsync(participantId);
+            var participant = await _context.Participants.FindAsync(ParticipantID);
             if (participant == null) return false;
 
-            if (!appointment.Participants.Any(p => p.ParticipantId == participantId))
+            if (!appointment.Participants.Any(p => p.ParticipantID == ParticipantID))
             {
                 appointment.Participants.Add(participant);
                 appointment.UpdatedAt = DateTimeOffset.UtcNow;
@@ -225,12 +225,12 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<bool> RemoveParticipantFromAppointmentAsync(Guid appointmentId, Guid participantId)
+        public async Task<bool> RemoveParticipantFromAppointmentAsync(Guid AppointmentID, Guid ParticipantID)
         {
-            var appointment = await GetAppointmentByIdAsync(appointmentId);
+            var appointment = await GetAppointmentByIdAsync(AppointmentID);
             if (appointment == null) return false;
 
-            var participant = appointment.Participants.FirstOrDefault(p => p.ParticipantId == participantId);
+            var participant = appointment.Participants.FirstOrDefault(p => p.ParticipantID == ParticipantID);
             if (participant != null)
             {
                 appointment.Participants.Remove(participant);
@@ -241,14 +241,14 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<IEnumerable<Appointment>> SearchAppointmentsAsync(Guid userId, string searchTerm)
+        public async Task<IEnumerable<Appointment>> SearchAppointmentsAsync(Guid UserID, string searchTerm)
         {
             if (string.IsNullOrWhiteSpace(searchTerm))
-                return await GetUserAppointmentsAsync(userId);
+                return await GetUserAppointmentsAsync(UserID);
 
             return await _context.Appointments
                 .Include(a => a.Participants)
-                .Where(a => a.UserId == userId &&
+                .Where(a => a.UserID == UserID &&
                            !a.IsDeleted &&
                            (a.Title.Contains(searchTerm) ||
                             a.Description.Contains(searchTerm) ||
@@ -258,18 +258,18 @@ namespace SphereScheduleAPI.Application.Services
                 .ToListAsync();
         }
 
-        public async Task<bool> CheckTimeConflictAsync(Guid userId, DateTimeOffset start, DateTimeOffset end, Guid? excludeAppointmentId = null)
+        public async Task<bool> CheckTimeConflictAsync(Guid UserID, DateTimeOffset start, DateTimeOffset end, Guid? excludeAppointmentID = null)
         {
             var query = _context.Appointments
-                .Where(a => a.UserId == userId &&
+                .Where(a => a.UserID == UserID &&
                            !a.IsDeleted &&
                            a.Status != "cancelled" &&
                            ((start >= a.StartDateTime && start < a.EndDateTime) ||
                             (end > a.StartDateTime && end <= a.EndDateTime) ||
                             (start <= a.StartDateTime && end >= a.EndDateTime)));
 
-            if (excludeAppointmentId.HasValue)
-                query = query.Where(a => a.AppointmentId != excludeAppointmentId.Value);
+            if (excludeAppointmentID.HasValue)
+                query = query.Where(a => a.AppointmentID != excludeAppointmentID.Value);
 
             return await query.AnyAsync();
         }

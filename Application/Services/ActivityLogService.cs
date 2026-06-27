@@ -28,13 +28,13 @@ namespace SphereScheduleAPI.Application.Services
         {
             try
             {
-                // Validate user exists if UserId is provided
-                if (createDto.UserId.HasValue)
+                // Validate user exists if UserID is provided
+                if (createDto.UserID.HasValue)
                 {
-                    var userExists = await _context.Users.AnyAsync(u => u.UserId == createDto.UserId.Value);
+                    var userExists = await _context.Users.AnyAsync(u => u.UserID == createDto.UserID.Value);
                     if (!userExists)
                     {
-                        _logger.LogWarning("User with ID {UserId} not found when creating activity log", createDto.UserId);
+                        _logger.LogWarning("User with ID {UserID} not found when creating activity log", createDto.UserID);
                         // Continue anyway - we still want to log the activity
                     }
                 }
@@ -45,14 +45,14 @@ namespace SphereScheduleAPI.Application.Services
                 _context.ActivityLogs.Add(activityLog);
                 await _context.SaveChangesAsync();
 
-                _logger.LogDebug("Created activity log {LogId} for user {UserId}, activity: {ActivityType}", 
-                    activityLog.LogId, createDto.UserId, createDto.ActivityType);
+                _logger.LogDebug("Created activity log {LogId} for user {UserID}, activity: {ActivityType}", 
+                    activityLog.LogId, createDto.UserID, createDto.ActivityType);
 
                 return await GetActivityLogByIdAsync(activityLog.LogId, true);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating activity log for user {UserId}", createDto.UserId);
+                _logger.LogError(ex, "Error creating activity log for user {UserID}", createDto.UserID);
                 throw;
             }
         }
@@ -96,9 +96,9 @@ namespace SphereScheduleAPI.Application.Services
             var query = _context.ActivityLogs.AsQueryable();
 
             // Apply filters
-            if (filterDto.UserId.HasValue)
+            if (filterDto.UserID.HasValue)
             {
-                query = query.Where(al => al.UserId == filterDto.UserId.Value);
+                query = query.Where(al => al.UserID == filterDto.UserID.Value);
             }
 
             if (!string.IsNullOrEmpty(filterDto.ActivityType))
@@ -186,9 +186,9 @@ namespace SphereScheduleAPI.Application.Services
             return activityLogDtos;
         }
 
-        public async Task<IEnumerable<ActivityLogDto>> GetActivityLogsByUserIdAsync(Guid userId, ActivityLogFilterDto filterDto)
+        public async Task<IEnumerable<ActivityLogDto>> GetActivityLogsByUserIDAsync(Guid UserID, ActivityLogFilterDto filterDto)
         {
-            filterDto.UserId = userId;
+            filterDto.UserID = UserID;
             return await GetActivityLogsByFilterAsync(filterDto);
         }
 
@@ -273,8 +273,8 @@ namespace SphereScheduleAPI.Application.Services
 
             // User activity count (top 10 users)
             var userActivities = activities
-                .Where(al => al.UserId.HasValue)
-                .GroupBy(al => al.UserId!.Value)
+                .Where(al => al.UserID.HasValue)
+                .GroupBy(al => al.UserID!.Value)
                 .OrderByDescending(g => g.Count())
                 .Take(10)
                 .ToDictionary(g => g.Key.ToString(), g => g.Count());
@@ -284,23 +284,23 @@ namespace SphereScheduleAPI.Application.Services
             return statistics;
         }
 
-        public async Task<UserActivitySummaryDto> GetUserActivitySummaryAsync(Guid userId)
+        public async Task<UserActivitySummaryDto> GetUserActivitySummaryAsync(Guid UserID)
         {
             var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.UserId == userId);
+                .FirstOrDefaultAsync(u => u.UserID == UserID);
 
             if (user == null)
             {
-                throw new KeyNotFoundException($"User with ID {userId} not found");
+                throw new KeyNotFoundException($"User with ID {UserID} not found");
             }
 
             var userActivities = await _context.ActivityLogs
-                .Where(al => al.UserId == userId)
+                .Where(al => al.UserID == UserID)
                 .ToListAsync();
 
             var summary = new UserActivitySummaryDto
             {
-                UserId = userId,
+                UserID = UserID,
                 UserEmail = user.Email,
                 UserDisplayName = user.DisplayName ?? user.Email,
                 TotalActivities = userActivities.Count,
@@ -399,11 +399,11 @@ namespace SphereScheduleAPI.Application.Services
             return oldLogs.Count;
         }
 
-        public async Task LogUserLoginAsync(Guid userId, string ipAddress, string userAgent, bool success, string? details = null)
+        public async Task LogUserLoginAsync(Guid UserID, string ipAddress, string userAgent, bool success, string? details = null)
         {
             var logDto = new CreateActivityLogDto
             {
-                UserId = userId,
+                UserID = UserID,
                 ActivityType = "login",
                 IpAddress = ipAddress,
                 UserAgent = userAgent,
@@ -414,11 +414,11 @@ namespace SphereScheduleAPI.Application.Services
             await CreateActivityLogAsync(logDto);
         }
 
-        public async Task LogUserLogoutAsync(Guid userId, string ipAddress, string userAgent)
+        public async Task LogUserLogoutAsync(Guid UserID, string ipAddress, string userAgent)
         {
             var logDto = new CreateActivityLogDto
             {
-                UserId = userId,
+                UserID = UserID,
                 ActivityType = "logout",
                 IpAddress = ipAddress,
                 UserAgent = userAgent,
@@ -429,11 +429,11 @@ namespace SphereScheduleAPI.Application.Services
             await CreateActivityLogAsync(logDto);
         }
 
-        public async Task LogEntityCreatedAsync(string entityType, Guid entityId, Guid userId, string details)
+        public async Task LogEntityCreatedAsync(string entityType, Guid entityId, Guid UserID, string details)
         {
             var logDto = new CreateActivityLogDto
             {
-                UserId = userId,
+                UserID = UserID,
                 ActivityType = $"create_{entityType.ToLower()}",
                 EntityType = entityType,
                 EntityId = entityId,
@@ -444,11 +444,11 @@ namespace SphereScheduleAPI.Application.Services
             await CreateActivityLogAsync(logDto);
         }
 
-        public async Task LogEntityUpdatedAsync(string entityType, Guid entityId, Guid userId, string details)
+        public async Task LogEntityUpdatedAsync(string entityType, Guid entityId, Guid UserID, string details)
         {
             var logDto = new CreateActivityLogDto
             {
-                UserId = userId,
+                UserID = UserID,
                 ActivityType = $"update_{entityType.ToLower()}",
                 EntityType = entityType,
                 EntityId = entityId,
@@ -459,11 +459,11 @@ namespace SphereScheduleAPI.Application.Services
             await CreateActivityLogAsync(logDto);
         }
 
-        public async Task LogEntityDeletedAsync(string entityType, Guid entityId, Guid userId, string details)
+        public async Task LogEntityDeletedAsync(string entityType, Guid entityId, Guid UserID, string details)
         {
             var logDto = new CreateActivityLogDto
             {
-                UserId = userId,
+                UserID = UserID,
                 ActivityType = $"delete_{entityType.ToLower()}",
                 EntityType = entityType,
                 EntityId = entityId,
@@ -474,11 +474,11 @@ namespace SphereScheduleAPI.Application.Services
             await CreateActivityLogAsync(logDto);
         }
 
-        public async Task LogErrorAsync(string activityType, Guid? userId, string details, string? entityType = null, Guid? entityId = null)
+        public async Task LogErrorAsync(string activityType, Guid? UserID, string details, string? entityType = null, Guid? entityId = null)
         {
             var logDto = new CreateActivityLogDto
             {
-                UserId = userId,
+                UserID = UserID,
                 ActivityType = activityType,
                 EntityType = entityType,
                 EntityId = entityId,
@@ -514,27 +514,27 @@ namespace SphereScheduleAPI.Application.Services
                 return entityType.ToLower() switch
                 {
                     "user" => await _context.Users
-                        .Where(u => u.UserId == entityId)
+                        .Where(u => u.UserID == entityId)
                         .Select(u => u.Email)
                         .FirstOrDefaultAsync(),
                     
                     "task" => await _context.Tasks
-                        .Where(t => t.TaskId == entityId)
+                        .Where(t => t.TaskID == entityId)
                         .Select(t => t.Title)
                         .FirstOrDefaultAsync(),
                     
                     "appointment" => await _context.Appointments
-                        .Where(a => a.AppointmentId == entityId)
+                        .Where(a => a.AppointmentID == entityId)
                         .Select(a => a.Title)
                         .FirstOrDefaultAsync(),
                     
                     "category" => await _context.Categories
-                        .Where(c => c.CategoryId == entityId)
+                        .Where(c => c.CategoryID == entityId)
                         .Select(c => c.CategoryName)
                         .FirstOrDefaultAsync(),
                     
                     "reminder" => await _context.Reminders
-                        .Where(r => r.ReminderId == entityId)
+                        .Where(r => r.ReminderID == entityId)
                         .Select(r => r.Title)
                         .FirstOrDefaultAsync(),
                     

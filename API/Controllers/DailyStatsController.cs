@@ -27,14 +27,14 @@ namespace SphereScheduleAPI.API.Controllers
             _mapper = mapper;
         }
 
-        private Guid GetCurrentUserId()
+        private Guid GetCurrentUserID()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            var UserIDClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(UserIDClaim) || !Guid.TryParse(UserIDClaim, out var UserID))
             {
                 throw new UnauthorizedAccessException("Invalid user ID in token");
             }
-            return userId;
+            return UserID;
         }
 
         // GET: api/dailystats
@@ -45,8 +45,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var stats = await _dailyStatService.GetUserDailyStatsAsync(userId, startDate, endDate);
+                var UserID = GetCurrentUserID();
+                var stats = await _dailyStatService.GetUserDailyStatsAsync(UserID, startDate, endDate);
                 return Ok(_mapper.Map<IEnumerable<DailyStatDto>>(stats));
             }
             catch (Exception ex)
@@ -61,14 +61,14 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var UserID = GetCurrentUserID();
                 var today = DateTime.Today;
-                var stat = await _dailyStatService.GetDailyStatByDateAsync(userId, today);
+                var stat = await _dailyStatService.GetDailyStatByDateAsync(UserID, today);
 
                 if (stat == null)
                 {
                     // Generate today's stat if it doesn't exist
-                    stat = await _dailyStatService.GenerateDailyStatAsync(userId, today);
+                    stat = await _dailyStatService.GenerateDailyStatAsync(UserID, today);
                 }
 
                 return Ok(_mapper.Map<DailyStatDto>(stat));
@@ -85,17 +85,17 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var UserID = GetCurrentUserID();
 
                 if (await _dailyStatService.IsDateInFutureAsync(date))
                     return BadRequest(new { message = "Cannot get stats for future dates" });
 
-                var stat = await _dailyStatService.GetDailyStatByDateAsync(userId, date);
+                var stat = await _dailyStatService.GetDailyStatByDateAsync(UserID, date);
 
                 if (stat == null)
                 {
                     // Generate stat if it doesn't exist
-                    stat = await _dailyStatService.GenerateDailyStatAsync(userId, date);
+                    stat = await _dailyStatService.GenerateDailyStatAsync(UserID, date);
                 }
 
                 return Ok(_mapper.Map<DailyStatDto>(stat));
@@ -112,7 +112,7 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var UserID = GetCurrentUserID();
 
                 if (await _dailyStatService.IsDateInFutureAsync(generateDto.Date))
                     return BadRequest(new { message = "Cannot generate stats for future dates" });
@@ -120,11 +120,11 @@ namespace SphereScheduleAPI.API.Controllers
                 DailyStat stat;
                 if (generateDto.ForceRecalculate)
                 {
-                    stat = await _dailyStatService.RecalculateDailyStatAsync(userId, generateDto.Date);
+                    stat = await _dailyStatService.RecalculateDailyStatAsync(UserID, generateDto.Date);
                 }
                 else
                 {
-                    stat = await _dailyStatService.GenerateDailyStatAsync(userId, generateDto.Date);
+                    stat = await _dailyStatService.GenerateDailyStatAsync(UserID, generateDto.Date);
                 }
 
                 return Ok(_mapper.Map<DailyStatDto>(stat));
@@ -145,7 +145,7 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var UserID = GetCurrentUserID();
 
                 if (rangeDto.StartDate > rangeDto.EndDate)
                     return BadRequest(new { message = "Start date must be before end date" });
@@ -153,7 +153,7 @@ namespace SphereScheduleAPI.API.Controllers
                 if (await _dailyStatService.IsDateInFutureAsync(rangeDto.EndDate))
                     return BadRequest(new { message = "Cannot generate stats for future dates" });
 
-                var success = await _dailyStatService.GenerateMissingDailyStatsAsync(userId, rangeDto.StartDate, rangeDto.EndDate);
+                var success = await _dailyStatService.GenerateMissingDailyStatsAsync(UserID, rangeDto.StartDate, rangeDto.EndDate);
 
                 if (!success)
                     return StatusCode(500, new { message = "Failed to generate stats for date range" });
@@ -174,8 +174,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var summary = await _dailyStatService.GetDailyStatSummaryAsync(userId, startDate, endDate);
+                var UserID = GetCurrentUserID();
+                var summary = await _dailyStatService.GetDailyStatSummaryAsync(UserID, startDate, endDate);
                 return Ok(summary);
             }
             catch (Exception ex)
@@ -192,12 +192,12 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var UserID = GetCurrentUserID();
 
                 if (startDate > endDate)
                     return BadRequest(new { message = "Start date must be before end date" });
 
-                var trend = await _dailyStatService.GetProductivityTrendAsync(userId, startDate, endDate);
+                var trend = await _dailyStatService.GetProductivityTrendAsync(UserID, startDate, endDate);
                 return Ok(trend);
             }
             catch (Exception ex)
@@ -212,8 +212,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var summary = await _dailyStatService.GetWeeklySummaryAsync(userId, weekStartDate);
+                var UserID = GetCurrentUserID();
+                var summary = await _dailyStatService.GetWeeklySummaryAsync(UserID, weekStartDate);
                 return Ok(summary);
             }
             catch (Exception ex)
@@ -228,8 +228,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var summary = await _dailyStatService.GetMonthlySummaryAsync(userId, year, month);
+                var UserID = GetCurrentUserID();
+                var summary = await _dailyStatService.GetMonthlySummaryAsync(UserID, year, month);
                 return Ok(summary);
             }
             catch (Exception ex)
@@ -244,8 +244,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var summary = await _dailyStatService.GetYearlySummaryAsync(userId, year);
+                var UserID = GetCurrentUserID();
+                var summary = await _dailyStatService.GetYearlySummaryAsync(UserID, year);
                 return Ok(summary);
             }
             catch (Exception ex)
@@ -260,8 +260,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var stats = await _dailyStatService.GetTopProductiveDaysAsync(userId, limit);
+                var UserID = GetCurrentUserID();
+                var stats = await _dailyStatService.GetTopProductiveDaysAsync(UserID, limit);
                 return Ok(_mapper.Map<IEnumerable<DailyStatDto>>(stats));
             }
             catch (Exception ex)
@@ -276,11 +276,11 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var UserID = GetCurrentUserID();
 
-                var currentStreak = await _dailyStatService.CalculateCurrentStreakAsync(userId);
-                var longestStreak = await _dailyStatService.CalculateLongestStreakAsync(userId);
-                var streakDays = await _dailyStatService.GetStreakDaysAsync(userId);
+                var currentStreak = await _dailyStatService.CalculateCurrentStreakAsync(UserID);
+                var longestStreak = await _dailyStatService.CalculateLongestStreakAsync(UserID);
+                var streakDays = await _dailyStatService.GetStreakDaysAsync(UserID);
 
                 var streakInfo = new StreakInfoDto
                 {
@@ -307,12 +307,12 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var UserID = GetCurrentUserID();
 
                 if (await _dailyStatService.IsDateInFutureAsync(date1) || await _dailyStatService.IsDateInFutureAsync(date2))
                     return BadRequest(new { message = "Cannot compare future dates" });
 
-                var comparison = await _dailyStatService.CompareDaysAsync(userId, date1, date2);
+                var comparison = await _dailyStatService.CompareDaysAsync(UserID, date1, date2);
                 return Ok(comparison);
             }
             catch (Exception ex)
@@ -329,8 +329,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var comparison = await _dailyStatService.CompareWeeksAsync(userId, week1Start, week2Start);
+                var UserID = GetCurrentUserID();
+                var comparison = await _dailyStatService.CompareWeeksAsync(UserID, week1Start, week2Start);
                 return Ok(comparison);
             }
             catch (Exception ex)
@@ -349,8 +349,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var comparison = await _dailyStatService.CompareMonthsAsync(userId, year1, month1, year2, month2);
+                var UserID = GetCurrentUserID();
+                var comparison = await _dailyStatService.CompareMonthsAsync(UserID, year1, month1, year2, month2);
                 return Ok(comparison);
             }
             catch (Exception ex)
@@ -367,12 +367,12 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var UserID = GetCurrentUserID();
 
                 if (startDate > endDate)
                     return BadRequest(new { message = "Start date must be before end date" });
 
-                var analysis = await _dailyStatService.AnalyzeProductivityTrendAsync(userId, startDate, endDate);
+                var analysis = await _dailyStatService.AnalyzeProductivityTrendAsync(UserID, startDate, endDate);
                 return Ok(analysis);
             }
             catch (Exception ex)
@@ -390,12 +390,12 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var UserID = GetCurrentUserID();
 
                 if (startDate > endDate)
                     return BadRequest(new { message = "Start date must be before end date" });
 
-                var progress = await _dailyStatService.GetGoalProgressAsync(userId, startDate, endDate, targetTasksPerDay);
+                var progress = await _dailyStatService.GetGoalProgressAsync(UserID, startDate, endDate, targetTasksPerDay);
                 return Ok(progress);
             }
             catch (Exception ex)
@@ -412,8 +412,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var metrics = await _dailyStatService.CalculatePerformanceMetricsAsync(userId, startDate, endDate);
+                var UserID = GetCurrentUserID();
+                var metrics = await _dailyStatService.CalculatePerformanceMetricsAsync(UserID, startDate, endDate);
                 return Ok(metrics);
             }
             catch (Exception ex)
@@ -430,8 +430,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var averages = await _dailyStatService.CalculateAverageDailyMetricsAsync(userId, startDate, endDate);
+                var UserID = GetCurrentUserID();
+                var averages = await _dailyStatService.CalculateAverageDailyMetricsAsync(UserID, startDate, endDate);
                 return Ok(averages);
             }
             catch (Exception ex)
@@ -448,8 +448,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var csvData = await _dailyStatService.ExportDailyStatsToCsvAsync(userId, startDate, endDate);
+                var UserID = GetCurrentUserID();
+                var csvData = await _dailyStatService.ExportDailyStatsToCsvAsync(UserID, startDate, endDate);
 
                 var fileName = $"dailystats-export-{DateTime.UtcNow:yyyyMMdd-HHmmss}.csv";
                 return File(csvData, "text/csv", fileName);
@@ -468,8 +468,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var jsonData = await _dailyStatService.ExportDailyStatsToJsonAsync(userId, startDate, endDate);
+                var UserID = GetCurrentUserID();
+                var jsonData = await _dailyStatService.ExportDailyStatsToJsonAsync(UserID, startDate, endDate);
 
                 var fileName = $"dailystats-export-{DateTime.UtcNow:yyyyMMdd-HHmmss}.json";
                 var bytes = System.Text.Encoding.UTF8.GetBytes(jsonData);
@@ -489,8 +489,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var success = await _dailyStatService.RecalculateUserStatsAsync(userId, startDate, endDate);
+                var UserID = GetCurrentUserID();
+                var success = await _dailyStatService.RecalculateUserStatsAsync(UserID, startDate, endDate);
 
                 if (!success)
                     return StatusCode(500, new { message = "Failed to recalculate stats" });
@@ -509,12 +509,12 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var UserID = GetCurrentUserID();
 
                 if (await _dailyStatService.IsDateInFutureAsync(date))
                     return BadRequest(new { message = "Cannot check goal for future dates" });
 
-                var achieved = await _dailyStatService.CheckDailyGoalAsync(userId, date, targetTasks);
+                var achieved = await _dailyStatService.CheckDailyGoalAsync(UserID, date, targetTasks);
                 return Ok(new { date, targetTasks, achieved });
             }
             catch (Exception ex)
@@ -532,12 +532,12 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var UserID = GetCurrentUserID();
 
                 if (startDate > endDate)
                     return BadRequest(new { message = "Start date must be before end date" });
 
-                var achievedDays = await _dailyStatService.GetGoalAchievedDaysAsync(userId, startDate, endDate, targetTasksPerDay);
+                var achievedDays = await _dailyStatService.GetGoalAchievedDaysAsync(UserID, startDate, endDate, targetTasksPerDay);
                 return Ok(achievedDays);
             }
             catch (Exception ex)
@@ -552,8 +552,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var stat = await _dailyStatService.GetMostProductiveDayAsync(userId);
+                var UserID = GetCurrentUserID();
+                var stat = await _dailyStatService.GetMostProductiveDayAsync(UserID);
 
                 if (stat == null)
                     return NotFound(new { message = "No productive days found" });
@@ -572,8 +572,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var stat = await _dailyStatService.GetLeastProductiveDayAsync(userId);
+                var UserID = GetCurrentUserID();
+                var stat = await _dailyStatService.GetLeastProductiveDayAsync(UserID);
 
                 if (stat == null)
                     return NotFound(new { message = "No stats found" });

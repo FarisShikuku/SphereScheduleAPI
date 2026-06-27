@@ -29,8 +29,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetUserIdFromToken();
-                var overview = await _dashboardService.GetDashboardOverviewAsync(userId, filterDto);
+                var UserID = GetUserIDFromToken();
+                var overview = await _dashboardService.GetDashboardOverviewAsync(UserID, filterDto);
                 return Ok(overview);
             }
             catch (Exception ex)
@@ -48,8 +48,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetUserIdFromToken();
-                var stats = await _dashboardService.GetTaskStatisticsAsync(userId, startDate, endDate);
+                var UserID = GetUserIDFromToken();
+                var stats = await _dashboardService.GetTaskStatisticsAsync(UserID, startDate, endDate);
                 return Ok(stats);
             }
             catch (Exception ex)
@@ -67,8 +67,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetUserIdFromToken();
-                var stats = await _dashboardService.GetAppointmentStatisticsAsync(userId, startDate, endDate);
+                var UserID = GetUserIDFromToken();
+                var stats = await _dashboardService.GetAppointmentStatisticsAsync(UserID, startDate, endDate);
                 return Ok(stats);
             }
             catch (Exception ex)
@@ -86,8 +86,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetUserIdFromToken();
-                var stats = await _dashboardService.GetProductivityStatisticsAsync(userId, startDate, endDate);
+                var UserID = GetUserIDFromToken();
+                var stats = await _dashboardService.GetProductivityStatisticsAsync(UserID, startDate, endDate);
                 return Ok(stats);
             }
             catch (Exception ex)
@@ -103,8 +103,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetUserIdFromToken();
-                var upcomingItems = await _dashboardService.GetUpcomingItemsAsync(userId, daysAhead);
+                var UserID = GetUserIDFromToken();
+                var upcomingItems = await _dashboardService.GetUpcomingItemsAsync(UserID, daysAhead);
                 return Ok(upcomingItems);
             }
             catch (Exception ex)
@@ -120,8 +120,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetUserIdFromToken();
-                var recentActivity = await _dashboardService.GetRecentActivityAsync(userId, count);
+                var UserID = GetUserIDFromToken();
+                var recentActivity = await _dashboardService.GetRecentActivityAsync(UserID, count);
                 return Ok(recentActivity);
             }
             catch (Exception ex)
@@ -137,8 +137,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetUserIdFromToken();
-                var stats = await _dashboardService.GetUserStatisticsAsync(userId);
+                var UserID = GetUserIDFromToken();
+                var stats = await _dashboardService.GetUserStatisticsAsync(UserID);
                 return Ok(stats);
             }
             catch (Exception ex)
@@ -156,8 +156,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetUserIdFromToken();
-                var report = await _dashboardService.GetProductivityReportAsync(userId, startDate, endDate);
+                var UserID = GetUserIDFromToken();
+                var report = await _dashboardService.GetProductivityReportAsync(UserID, startDate, endDate);
                 return Ok(report);
             }
             catch (Exception ex)
@@ -175,8 +175,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetUserIdFromToken();
-                var timeUsage = await _dashboardService.GetTimeUsageStatisticsAsync(userId, startDate, endDate);
+                var UserID = GetUserIDFromToken();
+                var timeUsage = await _dashboardService.GetTimeUsageStatisticsAsync(UserID, startDate, endDate);
                 return Ok(timeUsage);
             }
             catch (Exception ex)
@@ -192,8 +192,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetUserIdFromToken();
-                var notifications = await _dashboardService.GetNotificationSummaryAsync(userId);
+                var UserID = GetUserIDFromToken();
+                var notifications = await _dashboardService.GetNotificationSummaryAsync(UserID);
                 return Ok(notifications);
             }
             catch (Exception ex)
@@ -209,8 +209,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetUserIdFromToken();
-                var quickStats = await _dashboardService.GetQuickStatsAsync(userId);
+                var UserID = GetUserIDFromToken();
+                var quickStats = await _dashboardService.GetQuickStatsAsync(UserID);
                 return Ok(quickStats);
             }
             catch (Exception ex)
@@ -226,8 +226,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetUserIdFromToken();
-                var breakdown = await _dashboardService.GetCategoryBreakdownAsync(userId);
+                var UserID = GetUserIDFromToken();
+                var breakdown = await _dashboardService.GetCategoryBreakdownAsync(UserID);
                 return Ok(breakdown);
             }
             catch (Exception ex)
@@ -243,8 +243,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetUserIdFromToken();
-                var breakdown = await _dashboardService.GetPriorityBreakdownAsync(userId);
+                var UserID = GetUserIDFromToken();
+                var breakdown = await _dashboardService.GetPriorityBreakdownAsync(UserID);
                 return Ok(breakdown);
             }
             catch (Exception ex)
@@ -260,8 +260,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetUserIdFromToken();
-                var trend = await _dashboardService.GetMonthlyTrendAsync(userId, months);
+                var UserID = GetUserIDFromToken();
+                var trend = await _dashboardService.GetMonthlyTrendAsync(UserID, months);
                 return Ok(trend);
             }
             catch (Exception ex)
@@ -277,15 +277,15 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetUserIdFromToken();
+                var UserID = GetUserIDFromToken();
                 var today = DateTimeOffset.UtcNow.Date;
 
                 // Get multiple statistics in parallel
-                var taskStatsTask = _dashboardService.GetTaskStatisticsAsync(userId);
-                var appointmentStatsTask = _dashboardService.GetAppointmentStatisticsAsync(userId);
-                var quickStatsTask = _dashboardService.GetQuickStatsAsync(userId);
-                var upcomingTask = _dashboardService.GetUpcomingItemsAsync(userId, 3);
-                var notificationsTask = _dashboardService.GetNotificationSummaryAsync(userId);
+                var taskStatsTask = _dashboardService.GetTaskStatisticsAsync(UserID);
+                var appointmentStatsTask = _dashboardService.GetAppointmentStatisticsAsync(UserID);
+                var quickStatsTask = _dashboardService.GetQuickStatsAsync(UserID);
+                var upcomingTask = _dashboardService.GetUpcomingItemsAsync(UserID, 3);
+                var notificationsTask = _dashboardService.GetNotificationSummaryAsync(UserID);
 
                 await Task.WhenAll(
                     taskStatsTask,
@@ -314,17 +314,17 @@ namespace SphereScheduleAPI.API.Controllers
             }
         }
 
-        private Guid GetUserIdFromToken()
+        private Guid GetUserIDFromToken()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                             ?? User.FindFirst("userId")?.Value;
+            var UserIDClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                             ?? User.FindFirst("UserID")?.Value;
 
-            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            if (string.IsNullOrEmpty(UserIDClaim) || !Guid.TryParse(UserIDClaim, out var UserID))
             {
                 throw new UnauthorizedAccessException("User ID not found in token");
             }
 
-            return userId;
+            return UserID;
         }
     }
 }

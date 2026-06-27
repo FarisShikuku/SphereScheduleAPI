@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using AutoMapper;
+
 using SphereScheduleAPI.Application.Interfaces;
 using SphereScheduleAPI.Application.Mappings;
 using SphereScheduleAPI.Application.Services;
@@ -10,6 +11,7 @@ namespace SphereScheduleAPI.Application.Extensions
         public static IServiceCollection AddApplication(this IServiceCollection services)
         {
             // Register application services with interfaces
+            services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IAppointmentService, AppointmentService>();
             services.AddScoped<IUserService, UserManagementService>();
             services.AddScoped<ITaskService, TaskManagementService>();
@@ -21,17 +23,45 @@ namespace SphereScheduleAPI.Application.Extensions
             services.AddScoped<IParticipantService, ParticipantService>();
             services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<IActivityLogService, ActivityLogService>();
+            // Application/Extensions/ServiceCollectionExtensions.cs
+            // Add these lines inside your existing AddApplicationServices method
 
-            // Fix: Use proper AutoMapper registration
-            services.AddAutoMapper(config =>
+            // ═══════════════════════════════════════════
+            // NEW: Meeting Services
+            // ═══════════════════════════════════════════
+            services.AddScoped<IMeetingService, MeetingService>();
+
+            // ═══════════════════════════════════════════
+            // NEW: Event Services
+            // ═══════════════════════════════════════════
+            services.AddScoped<IEventService, EventService>();
+
+            // ═══════════════════════════════════════════
+            // NEW: Chat Services
+            // ═══════════════════════════════════════════
+            services.AddScoped<IChatService, ChatService>();
+
+            // ═══════════════════════════════════════════
+            // NEW: Note Services
+            // ═══════════════════════════════════════════
+            services.AddScoped<INoteService, NoteService>();
+
+            // ═══════════════════════════════════════════
+            // NEW: Notification Services
+            // ═══════════════════════════════════════════
+            services.AddScoped<INotificationService, NotificationService>();
+
+            // ═══════════════════════════════════════════
+            // NEW: EventLog Services
+            // ═══════════════════════════════════════════
+            services.AddScoped<IEventLogService, EventLogService>();
+
+            // Register AutoMapper profiles via configuration action to match available overloads.
+            services.AddAutoMapper(cfg =>
             {
-                config.AddProfile<MappingProfile>();
-                config.AddProfile<ReminderProfile>();
-                config.AddProfile<ParticipantProfile>();
+                cfg.AddProfile<MappingProfile>();
+                
             });
-
-            // Alternative: If you have multiple assemblies with profiles
-            // services.AddAutoMapper(typeof(MappingProfile).Assembly);
 
             return services;
         }

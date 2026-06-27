@@ -19,20 +19,22 @@ namespace SphereScheduleAPI.Application.Services
             _context = context;
         }
 
-        public async Task<TaskEntity> GetTaskByIdAsync(Guid taskId)
+        public async Task<TaskEntity> GetTaskByIdAsync(Guid TaskID)
         {
             return await _context.Tasks
                 .Include(t => t.Subtasks)
                 .Include(t => t.Reminders)
                 .Include(t => t.ChildTasks)
-                .FirstOrDefaultAsync(t => t.TaskId == taskId && !t.IsDeleted);
+                .Include(t => t.CategoryNavigation)
+                .FirstOrDefaultAsync(t => t.TaskID == TaskID && !t.IsDeleted);
         }
 
-        public async Task<IEnumerable<TaskEntity>> GetUserTasksAsync(Guid userId, DateTime? startDate = null, DateTime? endDate = null)
+        public async Task<IEnumerable<TaskEntity>> GetUserTasksAsync(Guid UserID, DateTime? startDate = null, DateTime? endDate = null)
         {
             var query = _context.Tasks
                 .Include(t => t.Subtasks)
-                .Where(t => t.UserId == userId && !t.IsDeleted);
+                .Include(t => t.CategoryNavigation)
+                .Where(t => t.UserID == UserID && !t.IsDeleted);
 
             if (startDate.HasValue)
                 query = query.Where(t => t.DueDate >= startDate || t.DueDate == null);
@@ -48,7 +50,7 @@ namespace SphereScheduleAPI.Application.Services
 
         public async Task<TaskEntity> CreateTaskAsync(TaskEntity task)
         {
-            task.TaskId = Guid.NewGuid();
+            task.TaskID = Guid.NewGuid();
             task.CreatedAt = DateTimeOffset.UtcNow;
             task.UpdatedAt = DateTimeOffset.UtcNow;
             task.IsDeleted = false;
@@ -61,9 +63,9 @@ namespace SphereScheduleAPI.Application.Services
 
         public async Task<TaskEntity> UpdateTaskAsync(TaskEntity task)
         {
-            var existing = await GetTaskByIdAsync(task.TaskId);
+            var existing = await GetTaskByIdAsync(task.TaskID);
             if (existing == null)
-                throw new KeyNotFoundException($"Task with ID {task.TaskId} not found");
+                throw new KeyNotFoundException($"Task with ID {task.TaskID} not found");
 
             task.UpdatedAt = DateTimeOffset.UtcNow;
             _context.Entry(existing).CurrentValues.SetValues(task);
@@ -71,16 +73,15 @@ namespace SphereScheduleAPI.Application.Services
             return task;
         }
 
-        public async Task<bool> DeleteTaskAsync(Guid taskId)
+        public async Task<bool> DeleteTaskAsync(Guid TaskID)
         {
-            var task = await GetTaskByIdAsync(taskId);
+            var task = await GetTaskByIdAsync(TaskID);
             if (task == null) return false;
 
             task.IsDeleted = true;
             task.DeletedAt = DateTimeOffset.UtcNow;
             task.UpdatedAt = DateTimeOffset.UtcNow;
 
-            // Soft delete subtasks
             foreach (var subtask in task.Subtasks)
             {
                 subtask.IsDeleted = true;
@@ -91,11 +92,12 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<IEnumerable<TaskEntity>> GetTasksByDateRangeAsync(Guid userId, DateTime startDate, DateTime endDate)
+        public async Task<IEnumerable<TaskEntity>> GetTasksByDateRangeAsync(Guid UserID, DateTime startDate, DateTime endDate)
         {
             return await _context.Tasks
                 .Include(t => t.Subtasks)
-                .Where(t => t.UserId == userId &&
+                .Include(t => t.CategoryNavigation)
+                .Where(t => t.UserID == UserID &&
                            !t.IsDeleted &&
                            t.DueDate >= startDate &&
                            t.DueDate <= endDate)
@@ -104,11 +106,12 @@ namespace SphereScheduleAPI.Application.Services
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<TaskEntity>> GetTasksByStatusAsync(Guid userId, string status)
+        public async Task<IEnumerable<TaskEntity>> GetTasksByStatusAsync(Guid UserID, string status)
         {
             return await _context.Tasks
                 .Include(t => t.Subtasks)
-                .Where(t => t.UserId == userId &&
+                .Include(t => t.CategoryNavigation)
+                .Where(t => t.UserID == UserID &&
                            !t.IsDeleted &&
                            t.Status == status)
                 .OrderBy(t => t.DueDate)
@@ -116,34 +119,38 @@ namespace SphereScheduleAPI.Application.Services
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<TaskEntity>> GetTasksByPriorityAsync(Guid userId, string priority)
+        public async Task<IEnumerable<TaskEntity>> GetTasksByPriorityAsync(Guid UserID, string priority)
         {
             return await _context.Tasks
                 .Include(t => t.Subtasks)
-                .Where(t => t.UserId == userId &&
+                .Include(t => t.CategoryNavigation)
+                .Where(t => t.UserID == UserID &&
                            !t.IsDeleted &&
                            t.PriorityLevel == priority)
                 .OrderBy(t => t.DueDate)
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<TaskEntity>> GetTasksByCategoryAsync(Guid userId, string category)
+        public async Task<IEnumerable<TaskEntity>> GetTasksByCategoryAsync(Guid UserID, string category)
         {
             return await _context.Tasks
                 .Include(t => t.Subtasks)
-                .Where(t => t.UserId == userId &&
+                .Include(t => t.CategoryNavigation)
+                .Where(t => t.UserID == UserID &&
                            !t.IsDeleted &&
-                           t.Category == category)
+                           t.CategoryNavigation != null &&
+                           t.CategoryNavigation.CategoryName == category)
                 .OrderBy(t => t.DueDate)
                 .ThenByDescending(t => t.PriorityLevel)
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<TaskEntity>> GetTasksByTypeAsync(Guid userId, string taskType)
+        public async Task<IEnumerable<TaskEntity>> GetTasksByTypeAsync(Guid UserID, string taskType)
         {
             return await _context.Tasks
                 .Include(t => t.Subtasks)
-                .Where(t => t.UserId == userId &&
+                .Include(t => t.CategoryNavigation)
+                .Where(t => t.UserID == UserID &&
                            !t.IsDeleted &&
                            t.TaskType == taskType)
                 .OrderBy(t => t.DueDate)
@@ -151,12 +158,13 @@ namespace SphereScheduleAPI.Application.Services
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<TaskEntity>> GetOverdueTasksAsync(Guid userId)
+        public async Task<IEnumerable<TaskEntity>> GetOverdueTasksAsync(Guid UserID)
         {
             var today = DateTime.Today;
             return await _context.Tasks
                 .Include(t => t.Subtasks)
-                .Where(t => t.UserId == userId &&
+                .Include(t => t.CategoryNavigation)
+                .Where(t => t.UserID == UserID &&
                            !t.IsDeleted &&
                            t.Status != "completed" &&
                            t.Status != "cancelled" &&
@@ -166,12 +174,13 @@ namespace SphereScheduleAPI.Application.Services
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<TaskEntity>> GetTodayTasksAsync(Guid userId)
+        public async Task<IEnumerable<TaskEntity>> GetTodayTasksAsync(Guid UserID)
         {
             var today = DateTime.Today;
             return await _context.Tasks
                 .Include(t => t.Subtasks)
-                .Where(t => t.UserId == userId &&
+                .Include(t => t.CategoryNavigation)
+                .Where(t => t.UserID == UserID &&
                            !t.IsDeleted &&
                            t.DueDate == today)
                 .OrderByDescending(t => t.PriorityLevel)
@@ -179,14 +188,15 @@ namespace SphereScheduleAPI.Application.Services
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<TaskEntity>> GetUpcomingTasksAsync(Guid userId, int daysAhead = 7)
+        public async Task<IEnumerable<TaskEntity>> GetUpcomingTasksAsync(Guid UserID, int daysAhead = 7)
         {
             var today = DateTime.Today;
             var futureDate = today.AddDays(daysAhead);
 
             return await _context.Tasks
                 .Include(t => t.Subtasks)
-                .Where(t => t.UserId == userId &&
+                .Include(t => t.CategoryNavigation)
+                .Where(t => t.UserID == UserID &&
                            !t.IsDeleted &&
                            t.Status != "completed" &&
                            t.Status != "cancelled" &&
@@ -197,38 +207,41 @@ namespace SphereScheduleAPI.Application.Services
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<TaskEntity>> GetTasksWithSubtasksAsync(Guid userId)
+        public async Task<IEnumerable<TaskEntity>> GetTasksWithSubtasksAsync(Guid UserID)
         {
             return await _context.Tasks
                 .Include(t => t.Subtasks)
-                .Where(t => t.UserId == userId &&
+                .Include(t => t.CategoryNavigation)
+                .Where(t => t.UserID == UserID &&
                            !t.IsDeleted &&
                            t.Subtasks.Any())
                 .OrderBy(t => t.DueDate)
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<TaskEntity>> GetRecurringTasksAsync(Guid userId)
+        public async Task<IEnumerable<TaskEntity>> GetRecurringTasksAsync(Guid UserID)
         {
             return await _context.Tasks
                 .Include(t => t.Subtasks)
-                .Where(t => t.UserId == userId &&
+                .Include(t => t.CategoryNavigation)
+                .Where(t => t.UserID == UserID &&
                            !t.IsDeleted &&
                            t.IsRecurring)
                 .OrderBy(t => t.DueDate)
                 .ToListAsync();
         }
 
-        public async Task<int> GetTaskCountByUserAsync(Guid userId)
+        public async Task<int> GetTaskCountByUserAsync(Guid UserID)
         {
             return await _context.Tasks
-                .CountAsync(t => t.UserId == userId && !t.IsDeleted);
+                .CountAsync(t => t.UserID == UserID && !t.IsDeleted);
         }
 
-        public async Task<Dictionary<string, int>> GetTaskStatisticsAsync(Guid userId, DateTime? startDate = null, DateTime? endDate = null)
+        public async Task<Dictionary<string, int>> GetTaskStatisticsAsync(Guid UserID, DateTime? startDate = null, DateTime? endDate = null)
         {
             var query = _context.Tasks
-                .Where(t => t.UserId == userId && !t.IsDeleted);
+                .Include(t => t.CategoryNavigation)
+                .Where(t => t.UserID == UserID && !t.IsDeleted);
 
             if (startDate.HasValue)
                 query = query.Where(t => t.CreatedAt >= startDate);
@@ -252,10 +265,11 @@ namespace SphereScheduleAPI.Application.Services
             };
         }
 
-        public async Task<Dictionary<string, object>> GetTaskCompletionStatsAsync(Guid userId, DateTime? startDate = null, DateTime? endDate = null)
+        public async Task<Dictionary<string, object>> GetTaskCompletionStatsAsync(Guid UserID, DateTime? startDate = null, DateTime? endDate = null)
         {
             var query = _context.Tasks
-                .Where(t => t.UserId == userId && !t.IsDeleted);
+                .Include(t => t.CategoryNavigation)
+                .Where(t => t.UserID == UserID && !t.IsDeleted);
 
             if (startDate.HasValue)
                 query = query.Where(t => t.CreatedAt >= startDate);
@@ -265,6 +279,11 @@ namespace SphereScheduleAPI.Application.Services
 
             var tasks = await query.ToListAsync();
             var completedTasks = tasks.Where(t => t.Status == "completed").ToList();
+
+            // Fixed: Use category name from navigation
+            var categoryBreakdown = tasks
+                .GroupBy(t => t.CategoryNavigation != null ? t.CategoryNavigation.CategoryName : "Uncategorized")
+                .ToDictionary(g => g.Key, g => g.Count());
 
             return new Dictionary<string, object>
             {
@@ -276,14 +295,13 @@ namespace SphereScheduleAPI.Application.Services
                 { "avgTimeSpent", tasks.Count > 0 ? tasks.Average(t => t.TimeSpentMinutes) : 0 },
                 { "priorityBreakdown", tasks.GroupBy(t => t.PriorityLevel)
                     .ToDictionary(g => g.Key, g => g.Count()) },
-                { "categoryBreakdown", tasks.GroupBy(t => t.Category)
-                    .ToDictionary(g => g.Key, g => g.Count()) }
+                { "categoryBreakdown", categoryBreakdown }
             };
         }
 
-        public async Task<bool> ChangeTaskStatusAsync(Guid taskId, string newStatus, int? completionPercentage = null)
+        public async Task<bool> ChangeTaskStatusAsync(Guid TaskID, string newStatus, int? completionPercentage = null)
         {
-            var task = await GetTaskByIdAsync(taskId);
+            var task = await GetTaskByIdAsync(TaskID);
             if (task == null) return false;
 
             task.Status = newStatus;
@@ -296,7 +314,6 @@ namespace SphereScheduleAPI.Application.Services
                 task.CompletedAt = DateTimeOffset.UtcNow;
                 task.CompletionPercentage = 100;
 
-                // Complete all subtasks
                 foreach (var subtask in task.Subtasks.Where(s => s.Status != "completed"))
                 {
                     subtask.Status = "completed";
@@ -309,9 +326,9 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<bool> UpdateTaskProgressAsync(Guid taskId, int progressPercentage)
+        public async Task<bool> UpdateTaskProgressAsync(Guid TaskID, int progressPercentage)
         {
-            var task = await GetTaskByIdAsync(taskId);
+            var task = await GetTaskByIdAsync(TaskID);
             if (task == null) return false;
 
             if (progressPercentage < 0 || progressPercentage > 100)
@@ -334,9 +351,9 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<bool> AddTimeSpentAsync(Guid taskId, int minutes)
+        public async Task<bool> AddTimeSpentAsync(Guid TaskID, int minutes)
         {
-            var task = await GetTaskByIdAsync(taskId);
+            var task = await GetTaskByIdAsync(TaskID);
             if (task == null) return false;
 
             task.TimeSpentMinutes += minutes;
@@ -346,18 +363,18 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<TaskEntity> DuplicateTaskAsync(Guid taskId)
+        public async Task<TaskEntity> DuplicateTaskAsync(Guid TaskID)
         {
-            var original = await GetTaskByIdAsync(taskId);
+            var original = await GetTaskByIdAsync(TaskID);
             if (original == null)
-                throw new KeyNotFoundException($"Task with ID {taskId} not found");
+                throw new KeyNotFoundException($"Task with ID {TaskID} not found");
 
             var duplicate = new TaskEntity
             {
-                UserId = original.UserId,
+                UserID = original.UserID,
                 Title = $"{original.Title} (Copy)",
                 Description = original.Description,
-                Category = original.Category,
+                CategoryID = original.CategoryID,
                 TaskType = original.TaskType,
                 PriorityLevel = original.PriorityLevel,
                 Status = "pending",
@@ -376,14 +393,15 @@ namespace SphereScheduleAPI.Application.Services
             return await CreateTaskAsync(duplicate);
         }
 
-        public async Task<IEnumerable<TaskEntity>> SearchTasksAsync(Guid userId, string searchTerm)
+        public async Task<IEnumerable<TaskEntity>> SearchTasksAsync(Guid UserID, string searchTerm)
         {
             if (string.IsNullOrWhiteSpace(searchTerm))
-                return await GetUserTasksAsync(userId);
+                return await GetUserTasksAsync(UserID);
 
             return await _context.Tasks
                 .Include(t => t.Subtasks)
-                .Where(t => t.UserId == userId &&
+                .Include(t => t.CategoryNavigation)
+                .Where(t => t.UserID == UserID &&
                            !t.IsDeleted &&
                            (t.Title.Contains(searchTerm) ||
                             t.Description.Contains(searchTerm) ||
@@ -395,25 +413,27 @@ namespace SphereScheduleAPI.Application.Services
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<TaskEntity>> GetTasksWithRemindersAsync(Guid userId)
+        public async Task<IEnumerable<TaskEntity>> GetTasksWithRemindersAsync(Guid UserID)
         {
             return await _context.Tasks
                 .Include(t => t.Reminders)
-                .Where(t => t.UserId == userId &&
+                .Include(t => t.CategoryNavigation)
+                .Where(t => t.UserID == UserID &&
                            !t.IsDeleted &&
                            t.Reminders.Any())
                 .OrderBy(t => t.DueDate)
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<TaskEntity>> GetTasksByTagsAsync(Guid userId, string[] tags)
+        public async Task<IEnumerable<TaskEntity>> GetTasksByTagsAsync(Guid UserID, string[] tags)
         {
             if (tags == null || tags.Length == 0)
-                return await GetUserTasksAsync(userId);
+                return await GetUserTasksAsync(UserID);
 
             return await _context.Tasks
                 .Include(t => t.Subtasks)
-                .Where(t => t.UserId == userId &&
+                .Include(t => t.CategoryNavigation)
+                .Where(t => t.UserID == UserID &&
                            !t.IsDeleted &&
                            tags.Any(tag => t.Tags.Contains(tag)))
                 .OrderBy(t => t.DueDate)
@@ -421,13 +441,13 @@ namespace SphereScheduleAPI.Application.Services
                 .ToListAsync();
         }
 
-        public async Task<bool> AddSubtaskToTaskAsync(Guid taskId, Subtask subtask)
+        public async Task<bool> AddSubtaskToTaskAsync(Guid TaskID, Subtask subtask)
         {
-            var task = await GetTaskByIdAsync(taskId);
+            var task = await GetTaskByIdAsync(TaskID);
             if (task == null) return false;
 
-            subtask.SubtaskId = Guid.NewGuid();
-            subtask.TaskId = taskId;
+            subtask.SubTaskID = Guid.NewGuid();
+            subtask.TaskID = TaskID;
             subtask.CreatedAt = DateTimeOffset.UtcNow;
             subtask.UpdatedAt = DateTimeOffset.UtcNow;
             subtask.IsDeleted = false;
@@ -439,12 +459,12 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<bool> RemoveSubtaskFromTaskAsync(Guid taskId, Guid subtaskId)
+        public async Task<bool> RemoveSubtaskFromTaskAsync(Guid TaskID, Guid subTaskID)
         {
-            var task = await GetTaskByIdAsync(taskId);
+            var task = await GetTaskByIdAsync(TaskID);
             if (task == null) return false;
 
-            var subtask = task.Subtasks.FirstOrDefault(s => s.SubtaskId == subtaskId);
+            var subtask = task.Subtasks.FirstOrDefault(s => s.SubTaskID == subTaskID);
             if (subtask == null) return false;
 
             subtask.IsDeleted = true;
@@ -455,16 +475,16 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<IEnumerable<Subtask>> GetTaskSubtasksAsync(Guid taskId)
+        public async Task<IEnumerable<Subtask>> GetTaskSubtasksAsync(Guid TaskID)
         {
-            var task = await GetTaskByIdAsync(taskId);
+            var task = await GetTaskByIdAsync(TaskID);
             return task?.Subtasks.Where(s => !s.IsDeleted).ToList() ?? new List<Subtask>();
         }
 
-        public async Task<bool> CompleteMultipleTasksAsync(Guid[] taskIds)
+        public async Task<bool> CompleteMultipleTasksAsync(Guid[] TaskIDs)
         {
             var tasks = await _context.Tasks
-                .Where(t => taskIds.Contains(t.TaskId) && !t.IsDeleted)
+                .Where(t => TaskIDs.Contains(t.TaskID) && !t.IsDeleted)
                 .ToListAsync();
 
             foreach (var task in tasks)
@@ -479,10 +499,10 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<bool> DeleteMultipleTasksAsync(Guid[] taskIds)
+        public async Task<bool> DeleteMultipleTasksAsync(Guid[] TaskIDs)
         {
             var tasks = await _context.Tasks
-                .Where(t => taskIds.Contains(t.TaskId) && !t.IsDeleted)
+                .Where(t => TaskIDs.Contains(t.TaskID) && !t.IsDeleted)
                 .ToListAsync();
 
             foreach (var task in tasks)
@@ -496,10 +516,10 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<bool> ChangeMultipleTasksPriorityAsync(Guid[] taskIds, string newPriority)
+        public async Task<bool> ChangeMultipleTasksPriorityAsync(Guid[] TaskIDs, string newPriority)
         {
             var tasks = await _context.Tasks
-                .Where(t => taskIds.Contains(t.TaskId) && !t.IsDeleted)
+                .Where(t => TaskIDs.Contains(t.TaskID) && !t.IsDeleted)
                 .ToListAsync();
 
             foreach (var task in tasks)

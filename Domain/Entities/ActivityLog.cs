@@ -3,12 +3,12 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SphereScheduleAPI.Domain.Entities
 {
-    public class ActivityLog
+    public class ActivityLog  // Not inheriting BaseEntity (no duplicates)
     {
         [Key]
         public long LogId { get; set; }
 
-        public Guid? UserId { get; set; }
+        public Guid? UserID { get; set; }
 
         [Required]
         [MaxLength(50)]
@@ -34,8 +34,7 @@ namespace SphereScheduleAPI.Domain.Entities
         [Required]
         public DateTimeOffset CreatedAt { get; set; }
 
-        // Navigation property
-        [ForeignKey("UserId")]
+        [ForeignKey("UserID")]
         public virtual User? User { get; set; }
     }
 }

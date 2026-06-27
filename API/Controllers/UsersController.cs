@@ -31,14 +31,14 @@ namespace SphereScheduleAPI.API.Controllers
             _passwordService = passwordService;
         }
 
-        private Guid GetCurrentUserId()
+        private Guid GetCurrentUserID()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            var UserIDClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(UserIDClaim) || !Guid.TryParse(UserIDClaim, out var UserID))
             {
                 throw new UnauthorizedAccessException("Invalid user ID in token");
             }
-            return userId;
+            return UserID;
         }
 
         private bool IsAdminUser()
@@ -53,8 +53,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var user = await _userService.GetUserByIdAsync(userId);
+                var UserID = GetCurrentUserID();
+                var user = await _userService.GetUserByIdAsync(UserID);
 
                 if (user == null)
                     return NotFound(new { message = "User not found" });
@@ -73,9 +73,9 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var UserID = GetCurrentUserID();
                 var updateUserDto = _mapper.Map<UpdateUserDto>(updateDto);
-                var updatedUser = await _userService.UpdateUserProfileAsync(userId, updateUserDto);
+                var updatedUser = await _userService.UpdateUserProfileAsync(UserID, updateUserDto);
 
                 return Ok(_mapper.Map<UserDto>(updatedUser));
             }
@@ -95,8 +95,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var user = await _userService.GetUserByIdAsync(userId);
+                var UserID = GetCurrentUserID();
+                var user = await _userService.GetUserByIdAsync(UserID);
 
                 if (user == null)
                     return NotFound(new { message = "User not found" });
@@ -123,8 +123,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var success = await _userService.UpdateUserPreferencesAsync(userId, preferencesDto.PreferencesJson);
+                var UserID = GetCurrentUserID();
+                var success = await _userService.UpdateUserPreferencesAsync(UserID, preferencesDto.PreferencesJson);
 
                 if (!success)
                     return StatusCode(500, new { message = "Failed to update preferences" });
@@ -143,8 +143,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var success = await _userService.ChangePasswordAsync(userId, passwordDto.CurrentPassword, passwordDto.NewPassword);
+                var UserID = GetCurrentUserID();
+                var success = await _userService.ChangePasswordAsync(UserID, passwordDto.CurrentPassword, passwordDto.NewPassword);
 
                 if (!success)
                     return BadRequest(new { message = "Current password is incorrect" });
@@ -211,8 +211,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var success = await _userService.VerifyEmailAsync(userId);
+                var UserID = GetCurrentUserID();
+                var success = await _userService.VerifyEmailAsync(UserID);
 
                 if (!success)
                     return StatusCode(500, new { message = "Failed to verify email" });
@@ -231,8 +231,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var stats = await _userService.GetUserDashboardStatsAsync(userId);
+                var UserID = GetCurrentUserID();
+                var stats = await _userService.GetUserDashboardStatsAsync(UserID);
 
                 return Ok(stats);
             }
@@ -250,8 +250,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var activities = await _userService.GetUserActivityLogsAsync(userId, startDate, endDate);
+                var UserID = GetCurrentUserID();
+                var activities = await _userService.GetUserActivityLogsAsync(UserID, startDate, endDate);
 
                 return Ok(activities);
             }
@@ -267,8 +267,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var success = await _userService.DeactivateAccountAsync(userId);
+                var UserID = GetCurrentUserID();
+                var success = await _userService.DeactivateAccountAsync(UserID);
 
                 if (!success)
                     return StatusCode(500, new { message = "Failed to deactivate account" });
@@ -287,8 +287,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var success = await _userService.ReactivateAccountAsync(userId);
+                var UserID = GetCurrentUserID();
+                var success = await _userService.ReactivateAccountAsync(UserID);
 
                 if (!success)
                     return StatusCode(500, new { message = "Failed to reactivate account" });
@@ -307,8 +307,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var success = await _userService.UpgradeAccountAsync(userId, upgradeDto.NewAccountType, upgradeDto.SubscriptionEndDate);
+                var UserID = GetCurrentUserID();
+                var success = await _userService.UpgradeAccountAsync(UserID, upgradeDto.NewAccountType, upgradeDto.SubscriptionEndDate);
 
                 if (!success)
                     return StatusCode(500, new { message = "Failed to upgrade account" });
@@ -327,8 +327,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var success = await _userService.CancelSubscriptionAsync(userId);
+                var UserID = GetCurrentUserID();
+                var success = await _userService.CancelSubscriptionAsync(UserID);
 
                 if (!success)
                     return StatusCode(500, new { message = "Failed to cancel subscription" });
@@ -347,8 +347,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var success = await _userService.EnableTwoFactorAsync(userId, twoFactorDto.TwoFactorCode);
+                var UserID = GetCurrentUserID();
+                var success = await _userService.EnableTwoFactorAsync(UserID, twoFactorDto.TwoFactorCode);
 
                 if (!success)
                     return StatusCode(500, new { message = "Failed to enable two-factor authentication" });
@@ -367,8 +367,8 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var success = await _userService.DisableTwoFactorAsync(userId);
+                var UserID = GetCurrentUserID();
+                var success = await _userService.DisableTwoFactorAsync(UserID);
 
                 if (!success)
                     return StatusCode(500, new { message = "Failed to disable two-factor authentication" });
@@ -384,11 +384,11 @@ namespace SphereScheduleAPI.API.Controllers
         // GET: api/users/check-email
         [AllowAnonymous]
         [HttpGet("check-email")]
-        public async Task<ActionResult> CheckEmailAvailability([FromQuery] string email, [FromQuery] Guid? excludeUserId = null)
+        public async Task<ActionResult> CheckEmailAvailability([FromQuery] string email, [FromQuery] Guid? excludeUserID = null)
         {
             try
             {
-                var isAvailable = await _userService.IsEmailAvailableAsync(email, excludeUserId);
+                var isAvailable = await _userService.IsEmailAvailableAsync(email, excludeUserID);
                 return Ok(new { email, isAvailable });
             }
             catch (Exception ex)
@@ -400,11 +400,11 @@ namespace SphereScheduleAPI.API.Controllers
         // GET: api/users/check-username
         [AllowAnonymous]
         [HttpGet("check-username")]
-        public async Task<ActionResult> CheckUsernameAvailability([FromQuery] string username, [FromQuery] Guid? excludeUserId = null)
+        public async Task<ActionResult> CheckUsernameAvailability([FromQuery] string username, [FromQuery] Guid? excludeUserID = null)
         {
             try
             {
-                var isAvailable = await _userService.IsUsernameAvailableAsync(username, excludeUserId);
+                var isAvailable = await _userService.IsUsernameAvailableAsync(username, excludeUserID);
                 return Ok(new { username, isAvailable });
             }
             catch (Exception ex)
@@ -419,14 +419,14 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
-                var exportData = await _userService.ExportUserDataAsync(userId);
+                var UserID = GetCurrentUserID();
+                var exportData = await _userService.ExportUserDataAsync(UserID);
 
                 if (string.IsNullOrEmpty(exportData))
                     return StatusCode(500, new { message = "Failed to export user data" });
 
                 var bytes = System.Text.Encoding.UTF8.GetBytes(exportData);
-                return File(bytes, "application/json", $"user-data-{userId}.json");
+                return File(bytes, "application/json", $"user-data-{UserID}.json");
             }
             catch (Exception ex)
             {
@@ -611,7 +611,7 @@ namespace SphereScheduleAPI.API.Controllers
         {
             try
             {
-                var success = await _userService.SendBulkNotificationAsync(notificationDto.UserIds, notificationDto.Message);
+                var success = await _userService.SendBulkNotificationAsync(notificationDto.UserIDs, notificationDto.Message);
                 if (!success)
                     return StatusCode(500, new { message = "Failed to send notifications" });
 
@@ -642,7 +642,7 @@ namespace SphereScheduleAPI.API.Controllers
                 else
                 {
                     // CSV export (default)
-                    exportData = await _userService.ExportUsersToCsvAsync(exportDto.UserIds);
+                    exportData = await _userService.ExportUsersToCsvAsync(exportDto.UserIDs);
                     return File(exportData, "text/csv", $"users-export-{DateTime.UtcNow:yyyyMMdd}.csv");
                 }
             }

@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Bhekams Traders Admin</title>
+
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
+    </script>
+
+    <style>
+        :root {
+            --primary: #E8742A;
+            --primary-hover: #d1651f;
+            --primary-light: rgba(232, 116, 42, 0.12);
+            --secondary: #1E293B;
+            --secondary-light: #334155;
+            --bg: #F1F5F9;
+            --surface: #FFFFFF;
+            --surface-alt: #F8FAFC;
+            --text: #0F172A;
+            --text-secondary: #475569;
+            --text-muted: #94A3B8;
+            --border: #E2E8F0;
+            --gradient-card: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            --gradient-featured: linear-gradient(145deg, #fff5f0 0%, #ffe8d9 100%);
+            --gradient-stat: linear-gradient(135deg, #ffffff 0%, #fef2eb 100%);
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+            --radius-sm: 6px;
+            --radius: 8px;
+            --radius-lg: 12px;
+            --radius-xl: 16px;
+            --sidebar-width: 240px;
+            --sidebar-collapsed: 60px;
+            --topbar-height: 60px;
+            --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --sidebar-bg: #1E293B;
+            --sidebar-text: rgba(255, 255, 255, 0.7);
+            --sidebar-active-bg: rgba(232, 116, 42, 0.2);
+        }
+
+        [data-theme="dark"] {
+            --bg: #0F172A;
+            --surface: #1E293B;
+            --surface-alt: #273549;
+            --text: #F1F5F9;
+            --text-secondary: #CBD5E1;
+            --text-muted: #64748B;
+            --border: #334155;
+            --secondary: #111827;
+            --secondary-light: #1e293b;
+            --primary-light: rgba(232, 116, 42, 0.2);
+            --gradient-card: linear-gradient(135deg, #1e293b 0%, #273549 100%);
+            --gradient-featured: linear-gradient(145deg, #2d1a0e 0%, #1a1f2e 100%);
+            --gradient-stat: linear-gradient(135deg, #1e293b 0%, #2a1f1a 100%);
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+            --sidebar-bg: #0b111e;
+            --sidebar-text: rgba(255, 255, 255, 0.7);
+            --sidebar-active-bg: rgba(232, 116, 42, 0.25);
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; }
+        html { font-size:14px; }
+        @media (min-width:640px){ html { font-size:15px; } }
+        @media (min-width:1024px){ html { font-size:16px; } }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            overflow: hidden;
+            height: 100vh;
+            height: 100dvh;
+            transition: background var(--transition), color var(--transition);
+        }
+
+        ::-webkit-scrollbar { width:5px; height:5px; }
+        ::-webkit-scrollbar-track { background:transparent; }
+        ::-webkit-scrollbar-thumb { background:var(--text-muted); border-radius:10px; }
+
+        /* ========== LOGIN PAGE ========== */
+        .login-page {
+            display:flex; align-items:center; justify-content:center; min-height:100vh; min-height:100dvh;
+            background:linear-gradient(135deg, #1E293B 0%, #0F172A 40%, #1a1a2e 100%);
+            position:relative; overflow:hidden;
+        }
+        .login-page::before {
+            content:''; position:absolute; top:-200px; right:-200px; width:600px; height:600px;
+            border-radius:50%; background:radial-gradient(circle, rgba(232,116,42,0.15) 0%, transparent 70%); pointer-events:none;
+        }
+        .login-page::after {
+            content:''; position:absolute; bottom:-150px; left:-150px; width:500px; height:500px;
+            border-radius:50%; background:radial-gradient(circle, rgba(232,116,42,0.1) 0%, transparent 70%); pointer-events:none;
+        }
+        .login-card {
+            background:linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border-radius:var(--radius-xl); padding:2.5rem 2rem; width:90%; max-width:400px;
+            box-shadow:var(--shadow-lg); position:relative; z-index:1; animation:slideUp 0.5s ease-out;
+        }
+        [data-theme="dark"] .login-card { background:linear-gradient(135deg, #1e293b 0%, #273549 100%); }
+        @keyframes slideUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+        .login-card .logo-area { text-align:center; margin-bottom:1.75rem; }
+        .login-card .logo-icon {
+            width:48px; height:48px; background:linear-gradient(135deg, #E8742A, #f08c5a); border-radius:var(--radius);
+            display:inline-flex; align-items:center; justify-content:center; color:#fff; font-weight:700;
+            font-size:1.5rem; margin-bottom:0.5rem;
+        }
+        .login-card h1 { font-size:1.5rem; font-weight:700; color:var(--text); margin-bottom:0.25rem; }
+        .login-card .subtitle { color:var(--text-muted); font-size:0.875rem; }
+        .login-card .form-group { margin-bottom:1rem; }
+        .login-card label { display:block; font-weight:500; margin-bottom:0.35rem; font-size:0.875rem; color:var(--text-secondary); }
+        .login-card input {
+            width:100%; padding:0.7rem 0.9rem; border:1.5px solid var(--border); border-radius:var(--radius);
+            font-size:0.95rem; font-family:var(--font); background:var(--surface); color:var(--text);
+            transition:all var(--transition); outline:none;
+        }
+        .login-card input:focus { border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-light); }
+        .login-card .btn-signin {
+            width:100%; padding:0.75rem; background:linear-gradient(135deg, #E8742A, #f08c5a); color:#fff;
+            border:none; border-radius:var(--radius); font-weight:600; font-size:1rem; cursor:pointer;
+            transition:all var(--transition); font-family:var(--font); margin-top:0.5rem;
+            box-shadow:0 4px 12px rgba(232,116,42,0.25);
+        }
+        .login-card .btn-signin:hover {
+            background:linear-gradient(135deg, #d1651f, #e07a4a); transform:translateY(-1px);
+            box-shadow:0 6px 16px rgba(232,116,42,0.4);
+        }
+        .login-card .error-msg { color:#EF4444; font-size:0.8rem; margin-top:0.5rem; text-align:center; display:none; }
+        .login-card .error-msg.show { display:block; }
+
+        /* ========== APP LAYOUT ========== */
+        .app-container { display:none; height:100vh; height:100dvh; width:100vw; overflow:hidden; }
+        .app-container.active { display:flex; }
+
+        /* ========== SIDEBAR ========== */
+        .sidebar {
+            width:var(--sidebar-width); min-width:var(--sidebar-width);
+            background:linear-gradient(180deg, #1a2236 0%, #0f172a 100%);
+            color:#fff; display:flex; flex-direction:column; transition:all var(--transition);
+            z-index:100; position:relative; overflow:hidden;
+            box-shadow:inset -1px 0 0 rgba(255,255,255,0.05);
+        }
+        [data-theme="dark"] .sidebar { background:linear-gradient(180deg, #0f172a 0%, #0b0f1a 100%); }
+        .sidebar.collapsed { width:var(--sidebar-collapsed); min-width:var(--sidebar-collapsed); }
+        .sidebar .sidebar-header {
+            padding:1rem 1.25rem; display:flex; align-items:center; gap:0.65rem;
+            border-bottom:1px solid rgba(255,255,255,0.1); height:var(--topbar-height); flex-shrink:0;
+            background:rgba(0,0,0,0.2);
+        }
+        .sidebar .sidebar-logo {
+            width:34px; height:34px; background:linear-gradient(135deg, #E8742A, #f08c5a);
+            border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center;
+            font-weight:700; font-size:1rem; flex-shrink:0; color:#fff;
+        }
+        .sidebar .sidebar-brand { font-weight:600; font-size:0.95rem; white-space:nowrap; overflow:hidden; transition:opacity var(--transition); }
+        .sidebar.collapsed .sidebar-brand { opacity:0; width:0; }
+        .sidebar .sidebar-nav { flex:1; overflow-y:auto; padding:0.75rem 0; list-style:none; }
+        .sidebar .sidebar-nav li a {
+            display:flex; align-items:center; gap:0.75rem; padding:0.65rem 1.25rem;
+            color:var(--sidebar-text); text-decoration:none; font-size:0.875rem; font-weight:500;
+            transition:all var(--transition); border-left:3px solid transparent; white-space:nowrap;
+            cursor:pointer; position:relative;
+        }
+        .sidebar.collapsed .sidebar-nav li a { justify-content:center; padding:0.65rem 0; gap:0; }
+        .sidebar .sidebar-nav li a:hover { background:rgba(255,255,255,0.06); color:#fff; }
+        .sidebar .sidebar-nav li a.active {
+            background:var(--sidebar-active-bg); color:#fff; border-left-color:var(--primary);
+        }
+        .sidebar.collapsed .sidebar-nav li a .nav-label { display:none; }
+        .sidebar .sidebar-nav li a .nav-icon { flex-shrink:0; width:20px; height:20px; }
+        .sidebar.collapsed .sidebar-nav li a::after {
+            content:attr(data-tooltip); position:absolute; left:calc(100% + 8px);
+            background:var(--text); color:var(--bg); padding:0.25rem 0.65rem;
+            border-radius:4px; font-size:0.75rem; white-space:nowrap; pointer-events:none;
+            opacity:0; transform:translateX(-5px); transition:all 0.15s ease; z-index:200;
+            box-shadow:var(--shadow-md);
+        }
+        .sidebar.collapsed .sidebar-nav li a:hover::after { opacity:1; transform:translateX(0); }
+        .sidebar .sidebar-footer {
+            padding:0.75rem 1.25rem; border-top:1px solid rgba(255,255,255,0.1);
+            flex-shrink:0; background:rgba(0,0,0,0.2);
+        }
+        .sidebar .collapse-btn {
+            background:none; border:none; color:rgba(255,255,255,0.6); cursor:pointer;
+            padding:0.4rem; border-radius:var(--radius-sm); transition:all var(--transition);
+            display:flex; align-items:center; justify-content:center; width:100%;
+        }
+        .sidebar .collapse-btn:hover { color:#fff; background:rgba(255,255,255,0.08); }
+
+        /* Mobile sidebar overlay */
+        @media (max-width:1024px) {
+            .sidebar {
+                position:fixed; left:0; top:0; bottom:0; z-index:150;
+                transform:translateX(-100%); box-shadow:var(--shadow-lg);
+                width:var(--sidebar-width); min-width:var(--sidebar-width);
+            }
+            .sidebar.mobile-open { transform:translateX(0); }
+            .sidebar-overlay {
+                display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:140;
+            }
+            .sidebar-overlay.show { display:block; }
+        }
+
+        /* ========== MAIN WRAPPER ========== */
+        .main-wrapper { flex:1; display:flex; flex-direction:column; overflow:hidden; min-width:0; }
+
+        /* ========== TOP BAR ========== */
+        .topbar {
+            height:var(--topbar-height); background:linear-gradient(to bottom, var(--surface), var(--surface-alt));
+            border-bottom:1px solid var(--border); display:flex; align-items:center; padding:0 1rem;
+            gap:0.75rem; flex-shrink:0; box-shadow:var(--shadow-sm); z-index:50;
+            transition:background var(--transition), border var(--transition);
+        }
+        .topbar .hamburger { background:none; border:none; cursor:pointer; color:var(--text); padding:0.35rem; border-radius:var(--radius-sm); display:flex; align-items:center; }
+        .topbar .hamburger:hover { background:var(--bg); }
+        .topbar .search-wrap { flex:1; max-width:420px; position:relative; }
+        .topbar .search-wrap input {
+            width:100%; padding:0.55rem 0.75rem 0.55rem 2.4rem; border:1.5px solid var(--border);
+            border-radius:20px; font-size:0.875rem; background:var(--bg); color:var(--text);
+            outline:none; font-family:var(--font); transition:all var(--transition);
+        }
+        .topbar .search-wrap input:focus {
+            border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-light); background:var(--surface);
+        }
+        .topbar .search-wrap .search-icon {
+            position:absolute; left:0.75rem; top:50%; transform:translateY(-50%);
+            color:var(--text-muted); pointer-events:none; width:16px; height:16px;
+        }
+        .topbar .topbar-actions { display:flex; align-items:center; gap:0.5rem; margin-left:auto; }
+        .topbar .theme-toggle {
+            background:none; border:none; cursor:pointer; color:var(--text-secondary);
+            padding:0.4rem; border-radius:50%; transition:all var(--transition);
+        }
+        .topbar .theme-toggle:hover { background:var(--bg); color:var(--text); }
+        .topbar .profile-btn {
+            background:none; border:none; cursor:pointer; display:flex; align-items:center;
+            gap:0.5rem; padding:0.35rem 0.6rem; border-radius:var(--radius);
+            transition:all var(--transition); color:var(--text); font-family:var(--font); font-size:0.85rem;
+        }
+        .topbar .profile-btn:hover { background:var(--bg); }
+        .topbar .avatar {
+            width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg, #E8742A, #f08c5a);
+            color:#fff; display:flex; align-items:center; justify-content:center;
+            font-weight:600; font-size:0.8rem; flex-shrink:0;
+        }
+        .profile-dropdown {
+            position:absolute; top:calc(var(--topbar-height) - 8px); right:0.5rem;
+            background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+            box-shadow:var(--shadow-lg); min-width:180px; z-index:200; display:none; overflow:hidden;
+            animation:fadeIn 0.15s ease-out;
+        }
+        .profile-dropdown.show { display:block; }
+        @keyframes fadeIn { from{ opacity:0; transform:translateY(-5px); } to{ opacity:1; transform:translateY(0); } }
+        .profile-dropdown .dropdown-item {
+            padding:0.6rem 1rem; cursor:pointer; font-size:0.85rem; color:var(--text);
+            transition:background var(--transition); display:flex; align-items:center; gap:0.5rem;
+            border:none; background:none; width:100%; text-align:left; font-family:var(--font);
+        }
+        .profile-dropdown .dropdown-item:hover { background:var(--bg); }
+        .profile-dropdown .dropdown-divider { border-top:1px solid var(--border); }
+
+        /* ========== CONTENT AREA ========== */
+        .content-area { flex:1; overflow-y:auto; padding:1rem; display:flex; gap:1rem; transition:all var(--transition); }
+        @media (max-width:640px){ .content-area { padding:0.75rem; flex-direction:column; } }
+        .content-main { flex:1; min-width:0; }
+        .content-panel {
+            width:340px; min-width:280px; background:var(--surface); border-radius:var(--radius-lg);
+            border:1px solid var(--border); overflow-y:auto; display:none; flex-shrink:0;
+            box-shadow:var(--shadow-sm); transition:all var(--transition);
+        }
+        .content-panel.visible { display:block; }
+        @media (max-width:1024px){
+            .content-panel {
+                position:fixed; left:0; right:0; bottom:0; top:auto; height:50vh; max-height:60vh;
+                width:100%; border-radius:var(--radius-lg) var(--radius-lg) 0 0; z-index:90;
+                transform:translateY(100%); display:block!important; box-shadow:0 -4px 20px rgba(0,0,0,0.2);
+                transition:transform 0.3s ease;
+            }
+            .content-panel.visible { transform:translateY(0); }
+            .panel-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:85; }
+            .panel-overlay.show { display:block; }
+        }
+
+        /* ========== STAT CARDS ========== */
+        .stat-cards { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; margin-bottom:1.5rem; }
+        @media (max-width:1024px){ .stat-cards { grid-template-columns:repeat(2,1fr); } }
+        @media (max-width:640px){ .stat-cards { grid-template-columns:1fr; } }
+        .stat-card {
+            background:var(--gradient-stat); border-radius:var(--radius-lg); padding:1.25rem;
+            border:1px solid var(--border); box-shadow:var(--shadow-sm); transition:all var(--transition);
+            cursor:default; position:relative; overflow:hidden;
+        }
+        .stat-card::before {
+            content:''; position:absolute; top:0; left:0; width:100%; height:3px;
+            background:linear-gradient(90deg, var(--primary), #f59e0b); opacity:0.7;
+        }
+        .stat-card:hover { box-shadow:var(--shadow-md); transform:translateY(-1px); }
+        .stat-card .stat-label { font-size:0.8rem; color:var(--text-muted); font-weight:500; text-transform:uppercase; letter-spacing:0.03em; margin-bottom:0.35rem; }
+        .stat-card .stat-value { font-size:1.75rem; font-weight:700; color:var(--text); }
+        .stat-card .stat-icon { width:36px; height:36px; border-radius:var(--radius); display:flex; align-items:center; justify-content:center; margin-bottom:0.5rem; }
+        [data-theme="dark"] .stat-card .stat-icon { background:rgba(0,0,0,0.3); }
+        .stat-card .stat-icon.orange { background:linear-gradient(135deg, #ffedd5, #fed7aa); color:#E8742A; }
+        .stat-card .stat-icon.blue { background:linear-gradient(135deg, #dbeafe, #bfdbfe); color:#3B82F6; }
+        .stat-card .stat-icon.green { background:linear-gradient(135deg, #dcfce7, #bbf7d0); color:#22C55E; }
+        .stat-card .stat-icon.red { background:linear-gradient(135deg, #fee2e2, #fecaca); color:#EF4444; }
+
+        .card { background:var(--gradient-card); border-radius:var(--radius-lg); border:1px solid var(--border); box-shadow:var(--shadow-sm); padding:1.25rem; transition:all var(--transition); }
+        .card-header { font-weight:600; font-size:1rem; margin-bottom:1rem; color:var(--text); display:flex; align-items:center; justify-content:space-between; }
+
+        table { width:100%; border-collapse:collapse; font-size:0.85rem; }
+        table th, table td { padding:0.7rem 0.85rem; text-align:left; border-bottom:1px solid var(--border); white-space:nowrap; }
+        table th { font-weight:600; color:var(--text-muted); font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em; background:var(--surface-alt); }
+        table tbody tr { transition:background var(--transition); cursor:pointer; }
+        table tbody tr:hover { background:var(--bg); }
+
+        .badge { display:inline-block; padding:0.2rem 0.6rem; border-radius:12px; font-size:0.7rem; font-weight:600; }
+        .badge-success { background:rgba(34,197,94,0.12); color:#16A34A; }
+        .badge-warning { background:rgba(245,158,11,0.12); color:#D97706; }
+        .badge-danger { background:rgba(239,68,68,0.12); color:#DC2626; }
+        .badge-info { background:rgba(59,130,246,0.12); color:#2563EB; }
+        .badge-neutral { background:rgba(148,163,184,0.12); color:#64748B; }
+
+        .btn { display:inline-flex; align-items:center; gap:0.4rem; padding:0.5rem 1rem; border-radius:var(--radius); font-weight:500; font-size:0.85rem; cursor:pointer; border:none; font-family:var(--font); transition:all var(--transition); white-space:nowrap; }
+        .btn-primary { background:linear-gradient(135deg, #E8742A, #f08c5a); color:#fff; box-shadow:0 2px 6px rgba(232,116,42,0.25); }
+        .btn-primary:hover { background:linear-gradient(135deg, #d1651f, #e07a4a); transform:translateY(-1px); }
+        .btn-outline { background:transparent; border:1.5px solid var(--border); color:var(--text); }
+        .btn-outline:hover { background:var(--bg); border-color:var(--text-muted); }
+        .btn-sm { padding:0.3rem 0.65rem; font-size:0.75rem; border-radius:var(--radius-sm); }
+        .btn-ghost { background:transparent; color:var(--text-secondary); }
+        .btn-ghost:hover { background:var(--bg); color:var(--text); }
+        .btn-danger { background:#EF4444; color:#fff; }
+
+        .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:300; display:flex; align-items:center; justify-content:center; }
+        .modal { background:var(--gradient-card); border-radius:var(--radius-xl); padding:1.5rem; width:90%; max-width:450px; box-shadow:var(--shadow-lg); animation:slideUp 0.25s ease-out; max-height:85vh; overflow-y:auto; }
+        .modal h3 { font-size:1.1rem; font-weight:600; margin-bottom:1rem; }
+        .modal .form-group { margin-bottom:0.85rem; }
+        .modal label { display:block; font-weight:500; font-size:0.8rem; margin-bottom:0.3rem; color:var(--text-secondary); }
+        .modal input, .modal select, .modal textarea { width:100%; padding:0.55rem 0.7rem; border:1.5px solid var(--border); border-radius:var(--radius); font-size:0.85rem; font-family:var(--font); background:var(--surface); color:var(--text); outline:none; }
+        .modal .modal-actions { display:flex; gap:0.5rem; justify-content:flex-end; margin-top:1rem; }
+
+        .toast-container { position:fixed; top:1rem; right:1rem; z-index:500; display:flex; flex-direction:column; gap:0.5rem; max-width:90vw; }
+        .toast { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:0.75rem 1rem; box-shadow:var(--shadow-lg); font-size:0.85rem; animation:slideInRight 0.3s ease-out; }
+        .toast.success { border-left:3px solid #22C55E; }
+        .toast.error { border-left:3px solid #EF4444; }
+        @keyframes slideInRight { from{ opacity:0; transform:translateX(100%); } to{ opacity:1; transform:translateX(0); } }
+
+        /* ========== CHAT REQUESTS ========== */
+        .chat-layout { display:flex; gap:1rem; height:100%; }
+        @media (max-width:1024px){ .chat-layout { flex-direction:column; } }
+        .chat-list-panel { width:280px; min-width:240px; background:var(--gradient-card); border-radius:var(--radius-lg); border:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; flex-shrink:0; }
+        @media (max-width:1024px){ .chat-list-panel { width:100%; max-height:180px; } }
+        .chat-list-panel .chat-search { padding:0.75rem; border-bottom:1px solid var(--border); }
+        .chat-list-panel .chat-search input { width:100%; padding:0.5rem 0.7rem; border:1.5px solid var(--border); border-radius:20px; font-size:0.8rem; background:var(--bg); color:var(--text); outline:none; font-family:var(--font); }
+        .chat-list-items { flex:1; overflow-y:auto; }
+        .chat-list-item { padding:0.75rem 0.85rem; cursor:pointer; border-bottom:1px solid var(--border); display:flex; gap:0.65rem; align-items:flex-start; transition:background var(--transition); }
+        .chat-list-item:hover { background:var(--bg); }
+        .chat-list-item.active { background:var(--primary-light); border-left:3px solid var(--primary); }
+        .chat-list-item .chat-avatar { width:40px; height:40px; border-radius:50%; background:var(--secondary-light); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:0.85rem; flex-shrink:0; background:linear-gradient(135deg, #3B82F6, #8B5CF6); }
+        .chat-list-item .chat-preview { flex:1; min-width:0; }
+        .chat-list-item .chat-name { font-weight:600; font-size:0.85rem; margin-bottom:0.15rem; }
+        .chat-list-item .chat-last-msg { font-size:0.75rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .chat-list-item .chat-meta { text-align:right; flex-shrink:0; }
+        .chat-list-item .chat-time { font-size:0.7rem; color:var(--text-muted); }
+        .chat-list-item .chat-badge { display:inline-block; background:var(--primary); color:#fff; border-radius:10px; padding:0.1rem 0.5rem; font-size:0.65rem; font-weight:600; margin-top:3px; }
+
+        .chat-thread { flex:1; background:var(--gradient-card); border-radius:var(--radius-lg); border:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
+        .chat-thread-header { padding:0.75rem 1rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+        .chat-messages { flex:1; overflow-y:auto; padding:1rem; display:flex; flex-direction:column; gap:0.6rem; }
+        .chat-msg { max-width:85%; padding:0.65rem 0.9rem; border-radius:var(--radius); font-size:0.85rem; line-height:1.5; word-wrap:break-word; box-shadow:var(--shadow-sm); }
+        .chat-msg.incoming { align-self:flex-start; background:var(--bg); color:var(--text); border-bottom-left-radius:4px; }
+        .chat-msg.outgoing { align-self:flex-end; background:linear-gradient(135deg, #E8742A, #f08c5a); color:#fff; border-bottom-right-radius:4px; }
+        .chat-msg .msg-time { font-size:0.65rem; opacity:0.7; margin-top:0.25rem; text-align:right; }
+
+        .quick-replies { padding:0.5rem 0.75rem; border-top:1px solid var(--border); display:flex; gap:0.4rem; flex-wrap:wrap; background:var(--surface); flex-shrink:0; }
+        .quick-replies .btn-quick { background:var(--bg); border:1px solid var(--border); color:var(--text); font-size:0.7rem; padding:0.3rem 0.7rem; border-radius:20px; cursor:pointer; transition:all var(--transition); }
+        .quick-replies .btn-quick:hover { background:var(--primary-light); border-color:var(--primary); color:var(--primary); }
+
+        .chat-input-area { padding:0.75rem; border-top:1px solid var(--border); display:flex; gap:0.5rem; background:var(--surface); flex-shrink:0; }
+        .chat-input-area textarea { flex:1; padding:0.55rem 0.75rem; border:1.5px solid var(--border); border-radius:var(--radius); font-size:0.85rem; font-family:var(--font); resize:none; min-height:40px; max-height:100px; background:var(--bg); color:var(--text); outline:none; }
+        .chat-input-area textarea:focus { border-color:var(--primary); }
+        .chat-input-area .btn-send { padding:0.55rem 1.2rem; background:linear-gradient(135deg, #E8742A, #f08c5a); color:#fff; border:none; border-radius:var(--radius); cursor:pointer; font-weight:600; }
+
+        /* ========== CATALOGUE ========== */
+        .product-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(180px,1fr)); gap:1rem; }
+        @media (max-width:640px){ .product-grid { grid-template-columns:repeat(2,1fr); } }
+        .product-card { background:var(--gradient-card); border-radius:var(--radius-lg); border:1px solid var(--border); overflow:hidden; cursor:pointer; transition:all var(--transition); box-shadow:var(--shadow-sm); }
+        .product-card:hover { box-shadow:var(--shadow-md); transform:translateY(-2px); }
+        .product-card .product-img { width:100%; height:140px; object-fit:contain; background:#ffffff; display:flex; align-items:center; justify-content:center; box-shadow:inset 0 1px 3px rgba(0,0,0,0.04); }
+        [data-theme="dark"] .product-card .product-img { background:#1e293b; }
+        .product-card .product-info { padding:0.85rem; }
+        .product-card .product-name { font-weight:600; font-size:0.85rem; margin-bottom:0.25rem; }
+        .product-card .product-price { font-weight:700; color:var(--primary); font-size:0.95rem; }
+        .product-card .product-stock { font-size:0.7rem; margin-top:0.2rem; }
+
+        .cat-header { cursor:pointer; font-size:1rem; font-weight:600; margin-bottom:0.75rem; display:flex; align-items:center; gap:0.5rem; }
+        .cat-header span.arrow { transition:transform 0.2s; display:inline-block; }
+
+        .page { display:none; width:100%; }
+        .page.active { display:block; }
+
+        /* ========== TABS ========== */
+        .tab-nav { display:flex; border-bottom:2px solid var(--border); margin-bottom:1rem; }
+        .tab-nav button { flex:1; padding:0.6rem 0.5rem; background:transparent; border:none; border-bottom:2px solid transparent; font-weight:600; font-size:0.8rem; color:var(--text-muted); cursor:pointer; transition:all var(--transition); margin-bottom:-2px; }
+        .tab-nav button.active { color:var(--primary); border-bottom-color:var(--primary); }
+        .tab-panel { display:none; }
+        .tab-panel.active { display:block; }
+
+        .invoice-mini-card { background:linear-gradient(135deg, #fef3c7, #fde68a); border-radius:var(--radius); padding:0.85rem; margin-top:1rem; border:1px solid #f59e0b; }
+        [data-theme="dark"] .invoice-mini-card { background:linear-gradient(135deg, #2d2a1a, #3b3517); border-color:#b45309; }
+
+        .chart-container { position:relative; height:200px; width:100%; }
+        .featured-product { background:var(--gradient-featured); }
+        .text-muted { color:var(--text-muted); font-size:0.8rem; }
+        .mb-1 { margin-bottom:0.5rem; } .mb-2 { margin-bottom:1rem; } .mb-3 { margin-bottom:1.5rem; }
+        .flex-between { display:flex; align-items:center; justify-content:space-between; }
+    </style>
+</head>
+<body>
+
+    <!-- LOGIN PAGE -->
+    <div class="login-page" id="loginPage">
+        <div class="login-card">
+            <div class="logo-area">
+                <div class="logo-icon">BT</div>
+                <h1>Bhekams Traders</h1>
+                <p class="subtitle">Admin Dashboard</p>
+            </div>
+            <div class="form-group"><label for="username">Username</label><input type="text" id="username" placeholder="Enter your username"></div>
+            <div class="form-group"><label for="password">Password</label><input type="password" id="password" placeholder="Enter your password"></div>
+            <p class="error-msg" id="loginError">Invalid username or password.</p>
+            <button class="btn-signin" onclick="handleLogin()">Sign In</button>
+            <p class="text-muted text-center" style="margin-top:1rem;font-size:0.7rem;">Demo: <strong>admin</strong> / <strong>admin</strong></p>
+        </div>
+    </div>
+
+    <!-- APP CONTAINER -->
+    <div class="app-container" id="appContainer">
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+        <aside class="sidebar collapsed" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">BT</div>
+                <span class="sidebar-brand">Bhekams</span>
+            </div>
+            <ul class="sidebar-nav" id="sidebarNav">
+                <li><a data-page="dashboard" class="active" onclick="navigateTo('dashboard', this)" data-tooltip="Dashboard"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span class="nav-label">Dashboard</span></a></li>
+                <li><a data-page="requests" onclick="navigateTo('requests', this)" data-tooltip="Requests"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="nav-label">Requests</span></a></li>
+                <li><a data-page="catalogue" onclick="navigateTo('catalogue', this)" data-tooltip="Catalogue"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg><span class="nav-label">Catalogue</span></a></li>
+                <li><a data-page="categories" onclick="navigateTo('categories', this)" data-tooltip="Categories"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h6v6H4z"/><path d="M14 4h6v6h-6z"/><path d="M4 14h6v6H4z"/><path d="M14 14h6v6h-6z"/></svg><span class="nav-label">Categories</span></a></li>
+                <li><a data-page="orders" onclick="navigateTo('orders', this)" data-tooltip="Orders"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span class="nav-label">Orders</span></a></li>
+                <li><a data-page="analytics" onclick="navigateTo('analytics', this)" data-tooltip="Analytics"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="nav-label">Analytics</span></a></li>
+                <li><a data-page="invoices" onclick="navigateTo('invoices', this)" data-tooltip="Invoices"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span class="nav-label">Invoices</span></a></li>
+                <li><a data-page="staff" onclick="navigateTo('staff', this)" data-tooltip="Staff"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="nav-label">Staff</span></a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <button class="collapse-btn" onclick="toggleSidebar()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
+            </div>
+        </aside>
+
+        <div class="main-wrapper">
+            <header class="topbar">
+                <button class="hamburger" onclick="openMobileSidebar()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+                <div class="search-wrap">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input type="text" id="globalSearch" placeholder="Search products, orders, customers..." oninput="handleGlobalSearch(this.value)">
+                </div>
+                <div class="topbar-actions">
+                    <button class="theme-toggle" onclick="toggleTheme()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="sunIcon"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="moonIcon" style="display:none;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
+                    <div style="position:relative;">
+                        <button class="profile-btn" onclick="toggleProfileDropdown()"><div class="avatar" id="profileAvatar">A</div><span id="profileName" style="display:none;">Admin</span></button>
+                        <div class="profile-dropdown" id="profileDropdown">
+                            <div class="dropdown-item" style="font-weight:600;pointer-events:none;">Admin (Admin)</div>
+                            <div class="dropdown-divider"></div>
+                            <button class="dropdown-item" onclick="handleSwitchUser()">Switch User</button>
+                            <button class="dropdown-item" onclick="openSupportModal()">Support</button>
+                            <div class="dropdown-divider"></div>
+                            <button class="dropdown-item" onclick="handleLogout()" style="color:#EF4444;">Logout</button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <div class="content-area" id="contentArea">
+                <div class="content-main" id="contentMain"></div>
+                <div class="content-panel" id="rightPanel"></div>
+                <div class="panel-overlay" id="panelOverlay" onclick="closeRightPanel()"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+    <div class="modal-overlay" id="supportModal" style="display:none;">
+        <div class="modal"><h3>Support</h3><p>dev@bhekams.co.za</p><textarea placeholder="Bug description"></textarea><div class="modal-actions"><button class="btn btn-outline" onclick="closeSupportModal()">Cancel</button><button class="btn btn-primary" onclick="submitBugReport()">Submit</button></div></div>
+    </div>
+    <div class="modal-overlay" id="confirmModal" style="display:none;">
+        <div class="modal"><h3 id="confirmTitle"></h3><p id="confirmMsg"></p><div class="modal-actions"><button class="btn btn-outline" onclick="closeConfirmModal()">Cancel</button><button class="btn btn-danger" id="confirmBtn">Confirm</button></div></div>
+    </div>
+
+    <script>
+        // ==================== STATE ====================
+        const state = {
+            currentUser: null,
+            currentPage: 'dashboard',
+            theme: 'light',
+            sidebarCollapsed: true,
+            rightPanelVisible: false,
+            selectedConversation: null,
+            rightPanelTab: 'aimatch',
+            aiMatchTriggered: false,
+        };
+
+        // ==================== MOCK DATA ====================
+        const mockProducts = [
+            { id:1, name:'Brake Pad Set - Toyota', category:'Brakes', price:850, stock:24, image:'🛑', sku:'BP-TY-001', sold:145 },
+            { id:2, name:'Oil Filter - Honda', category:'Filters', price:180, stock:60, image:'🔧', sku:'OF-HD-002', sold:230 },
+            { id:3, name:'Spark Plug Set (4pk)', category:'Ignition', price:320, stock:0, image:'⚡', sku:'SP-IG-003', sold:89 },
+            { id:4, name:'Headlight Bulb H4', category:'Lighting', price:95, stock:150, image:'💡', sku:'HB-LT-004', sold:310 },
+            { id:5, name:'Shock Absorber - Front', category:'Suspension', price:1200, stock:8, image:'🔩', sku:'SA-SP-005', sold:42 },
+            { id:6, name:'Air Filter - Universal', category:'Filters', price:140, stock:35, image:'🌬️', sku:'AF-FL-006', sold:178 },
+            { id:7, name:'Clutch Kit - VW', category:'Transmission', price:2800, stock:3, image:'⚙️', sku:'CK-TR-007', sold:18 },
+            { id:8, name:'Battery 12V 60Ah', category:'Electrical', price:1650, stock:12, image:'🔋', sku:'BT-EL-008', sold:67 },
+        ];
+
+        const mockCategories = [
+            { id:1, name:'Brakes', productCount:8 }, { id:2, name:'Filters', productCount:12 },
+            { id:3, name:'Ignition', productCount:5 }, { id:4, name:'Lighting', productCount:15 },
+            { id:5, name:'Suspension', productCount:9 }, { id:6, name:'Transmission', productCount:6 },
+            { id:7, name:'Electrical', productCount:10 },
+        ];
+
+        const mockConversations = [
+            { id:1, phone:'+254 712 345 678', name:'John Dlamini', lastMsg:'I need brake pads', time:'10:32 AM', unread:3, status:'Inquiry', messages:[
+                {from:'customer',text:'Hi, I need brake pads for my Toyota',time:'10:28 AM'},
+                {from:'customer',text:'Do you have them?',time:'10:30 AM'},
+                {from:'customer',text:'Price?',time:'10:32 AM'}
+            ]},
+            { id:2, phone:'+254 723 987 654', name:'Sarah Nkosi', lastMsg:'Send invoice', time:'Yesterday', unread:0, status:'Order', messages:[
+                {from:'customer',text:'Order 4 spark plugs',time:'3:15 PM'},
+                {from:'admin',text:'Total KSH 320',time:'3:20 PM'},
+                {from:'customer',text:'Send invoice',time:'3:22 PM'}
+            ]},
+            { id:3, phone:'+254 734 567 890', name:'Mike van der Merwe', lastMsg:'Image received', time:'2d ago', unread:1, status:'Pending', messages:[
+                {from:'customer',text:'Here is the part I need',time:'11:05 AM'},
+                {from:'customer',text:'[Image: part.jpg]',time:'11:06 AM',isImage:true},
+                {from:'customer',text:'Do you stock this?',time:'11:08 AM'}
+            ]},
+        ];
+
+        const mockOrders = [
+            {id:101, customerPhone:'+254 712 345 678', customerName:'John Dlamini', amount:850, status:'Paid', receipt:'RCP-001', date:'2026-06-20'},
+            {id:102, customerPhone:'+254 723 987 654', customerName:'Sarah Nkosi', amount:320, status:'Pending', receipt:'RCP-002', date:'2026-06-22'},
+            {id:103, customerPhone:'+254 734 567 890', customerName:'Mike van der Merwe', amount:2800, status:'Cancelled', receipt:'RCP-003', date:'2026-06-18'},
+        ];
+
+        const mockInvoices = [
+            {id:201, orderId:101, customer:'John Dlamini', amount:850, status:'Sent', date:'2026-06-20'},
+            {id:202, orderId:102, customer:'Sarah Nkosi', amount:320, status:'Draft', date:'2026-06-22'},
+        ];
+
+        const mockStaff = [
+            {id:1, username:'admin', email:'admin@bhekams.co.za', role:'Admin'},
+            {id:2, username:'staff01', email:'staff01@bhekams.co.za', role:'Staff'},
+        ];
+
+        // ==================== UTILS ====================
+        const $ = s => document.querySelector(s);
+        const $$ = s => document.querySelectorAll(s);
+        function showToast(msg, type='success') {
+            const t = document.createElement('div'); t.className = `toast ${type}`;
+            t.innerHTML = `<span>${type==='success'?'✅':'❌'}</span> ${msg}`;
+            $('#toastContainer').appendChild(t);
+            setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.remove(),300); },3000);
+        }
+        function showConfirm(title, msg, cb) {
+            $('#confirmTitle').textContent=title; $('#confirmMsg').textContent=msg;
+            $('#confirmModal').style.display='flex'; $('#confirmBtn').onclick=()=>{ closeConfirmModal(); cb&&cb(); };
+        }
+        function closeConfirmModal(){ $('#confirmModal').style.display='none'; }
+        function openSupportModal(){ $('#supportModal').style.display='flex'; }
+        function closeSupportModal(){ $('#supportModal').style.display='none'; }
+        function submitBugReport(){ closeSupportModal(); showToast('Report submitted'); }
+        function toggleProfileDropdown(){ $('#profileDropdown').classList.toggle('show'); }
+        function toggleTheme() {
+            state.theme = state.theme==='light'?'dark':'light';
+            document.documentElement.setAttribute('data-theme', state.theme);
+            $('#sunIcon').style.display = state.theme==='dark'?'none':'block';
+            $('#moonIcon').style.display = state.theme==='dark'?'block':'none';
+            localStorage.setItem('bhekams-theme', state.theme);
+            if (state.currentPage==='analytics') initAnalyticsCharts();
+        }
+        function toggleSidebar() {
+            state.sidebarCollapsed = !state.sidebarCollapsed;
+            $('#sidebar').classList.toggle('collapsed', state.sidebarCollapsed);
+            localStorage.setItem('bhekams-sidebar', state.sidebarCollapsed?'collapsed':'');
+        }
+        function openMobileSidebar(){
+            $('#sidebar').classList.add('mobile-open');
+            $('#sidebarOverlay').classList.add('show');
+        }
+        function closeSidebar(){
+            $('#sidebar').classList.remove('mobile-open');
+            $('#sidebarOverlay').classList.remove('show');
+        }
+        function closeRightPanel(){
+            state.rightPanelVisible=false;
+            $('#rightPanel').classList.remove('visible');
+            $('#panelOverlay').classList.remove('show');
+        }
+        function openRightPanel(content){
+            state.rightPanelVisible=true;
+            $('#rightPanel').classList.add('visible');
+            $('#rightPanel').innerHTML=content;
+            if(window.innerWidth<=1024) $('#panelOverlay').classList.add('show');
+        }
+        document.addEventListener('click', e => { if(!e.target.closest('.profile-btn')&&!e.target.closest('#profileDropdown')) $('#profileDropdown').classList.remove('show'); });
+
+        // ==================== NAVIGATION ====================
+        function navigateTo(page, linkEl) {
+            state.currentPage = page;
+            $$('#sidebarNav li a').forEach(a => a.classList.remove('active'));
+            if(linkEl) linkEl.classList.add('active');
+            closeRightPanel();
+            if(window.innerWidth<=1024) closeSidebar();
+            renderPage(page);
+        }
+
+        function renderPage(page) {
+            const main = $('#contentMain'); const panel = $('#rightPanel');
+            panel.classList.remove('visible'); $('#panelOverlay').classList.remove('show');
+            state.rightPanelVisible = false;
+            state.aiMatchTriggered = false;
+            switch(page) {
+                case 'dashboard': main.innerHTML = renderDashboard(); break;
+                case 'requests': main.innerHTML = renderRequests(); state.selectedConversation=null; break;
+                case 'catalogue': main.innerHTML = renderCatalogue(); break;
+                case 'categories': main.innerHTML = renderCategories(); break;
+                case 'orders': main.innerHTML = renderOrders(); break;
+                case 'analytics': main.innerHTML = renderAnalytics(); setTimeout(initAnalyticsCharts,300); break;
+                case 'invoices': main.innerHTML = renderInvoices(); break;
+                case 'staff': main.innerHTML = renderStaff(); break;
+            }
+        }
+
+        // ==================== PAGE RENDERERS ====================
+        function renderDashboard() {
+            const totalMessages=156, processed=132, orders=mockOrders.length, alerts=mockProducts.filter(p=>p.stock===0).length;
+            const featured = mockProducts.sort((a,b)=>b.price-a.price)[0];
+            return `
+            <div class="page active">
+              <h2 style="font-weight:700;margin-bottom:1rem;">Dashboard</h2>
+              <div class="stat-cards">
+                <div class="stat-card"><div class="stat-icon blue">💬</div><div class="stat-label">Total Messages</div><div class="stat-value">${totalMessages}</div></div>
+                <div class="stat-card"><div class="stat-icon green">✅</div><div class="stat-label">Processed</div><div class="stat-value">${processed}</div></div>
+                <div class="stat-card"><div class="stat-icon orange">📦</div><div class="stat-label">Orders</div><div class="stat-value">${orders}</div></div>
+                <div class="stat-card"><div class="stat-icon red">⚠️</div><div class="stat-label">Stock Alerts</div><div class="stat-value">${alerts}</div></div>
+              </div>
+              <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+                <div class="card" style="flex:2;min-width:280px;">
+                  <div class="card-header">Frequent Items</div>
+                  <table><thead><tr><th>Product</th><th>Category</th><th>Sales</th><th>Trend</th></tr></thead><tbody>
+                    ${mockProducts.sort((a,b)=>b.sold-a.sold).slice(0,5).map(p=>`<tr><td>${p.image} ${p.name}</td><td>${p.category}</td><td>${p.sold}</td><td>${p.sold>100?'📈':'📉'}</td></tr>`).join('')}
+                  </tbody></table>
+                </div>
+                <div class="card featured-product" style="flex:1;min-width:200px;text-align:center;">
+                  <div class="card-header">Featured</div>
+                  <div style="font-size:3rem;">${featured.image}</div>
+                  <h4>${featured.name}</h4>
+                  <p style="color:var(--text-muted);">${featured.category}</p>
+                  <p style="font-weight:700;font-size:1.2rem;color:var(--primary);">KSH ${featured.price.toFixed(2)}</p>
+                  <button class="btn btn-primary btn-sm" style="margin-top:0.5rem;" onclick="showToast('Order creation started')">Create Order</button>
+                </div>
+              </div>
+            </div>`;
+        }
+
+        function renderRequests() {
+            const convListHtml = mockConversations.map(c=>`
+            <div class="chat-list-item ${state.selectedConversation?.id===c.id?'active':''}" onclick="selectConversation(${c.id})">
+              <div class="chat-avatar">${c.name.charAt(0)}</div>
+              <div class="chat-preview"><div class="chat-name">${c.name}</div><div class="chat-last-msg">${c.lastMsg}</div></div>
+              <div class="chat-meta"><div class="chat-time">${c.time}</div>${c.unread?`<div class="chat-badge">${c.unread}</div>`:''}</div>
+            </div>`).join('');
+
+            const sel = state.selectedConversation;
+            const chatHtml = sel ? sel.messages.map(m=>`<div class="chat-msg ${m.from==='customer'?'incoming':'outgoing'}">${m.isImage?'📷 Image':m.text}<div class="msg-time">${m.time}</div></div>`).join('') : '<div style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-muted);">Select a conversation</div>';
+
+            if (sel && !state.rightPanelVisible) {
+                setTimeout(()=>openRightPanel(buildRightPanel(sel)),100);
+            } else if (sel && state.rightPanelVisible) {
+                $('#rightPanel').innerHTML = buildRightPanel(sel);
+                switchTab(state.rightPanelTab || 'aimatch');
+                if (state.aiMatchTriggered) {
+                    const results = document.getElementById('aiMatchResults');
+                    if (results) results.style.display = 'block';
+                }
+                setTimeout(updateInvTotal,50);
+            }
+
+            return `
+            <div class="page active" style="height:100%;">
+              <div class="chat-layout" style="height:100%;">
+                <div class="chat-list-panel">
+                  <div class="chat-search"><input type="text" placeholder="Search conversations..." oninput="filterConversations(this.value)"></div>
+                  <div class="chat-list-items" id="chatListItems">${convListHtml}</div>
+                </div>
+                <div class="chat-thread">
+                  <div class="chat-thread-header">
+                    <strong>${sel?sel.name:'Chat'}</strong>
+                    ${sel?`<select onchange="updateConvStatus(${sel.id},this.value)" style="font-size:0.7rem;padding:0.2rem;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--text);">
+                      ${['Unread','Read','Pending','Inquiry','Order','Replied'].map(s=>`<option ${sel.status===s?'selected':''}>${s}</option>`).join('')}
+                    </select>`:''}
+                  </div>
+                  <div class="chat-messages" id="chatMessages">${chatHtml}</div>
+                  <div class="quick-replies">
+                    <button class="btn-quick" onclick="sendQuickReply('payment')">💳 Payment</button>
+                    <button class="btn-quick" onclick="sendQuickReply('invoice')">📄 Invoice</button>
+                    <button class="btn-quick" onclick="sendQuickReply('order')">📦 Order</button>
+                  </div>
+                  <div class="chat-input-area">
+                    <textarea id="chatInput" placeholder="Type a message..." rows="1" onkeydown="handleChatKey(event)"></textarea>
+                    <button class="btn-send" onclick="sendMessage()">Send</button>
+                  </div>
+                </div>
+              </div>
+            </div>`;
+        }
+
+        function buildRightPanel(conv) {
+            const hasImage = conv.messages.some(m => m.isImage);
+            const imageHtml = hasImage ? '<div style="font-size:3rem;">📷</div><p style="font-size:0.8rem;">Customer uploaded image</p>' : '<div style="font-size:3rem;opacity:0.5;">🖼️</div><p style="font-size:0.8rem;color:var(--text-muted);">No image received</p>';
+            return `
+            <div style="padding:1rem;">
+              <div class="tab-nav">
+                <button class="tab-btn ${state.rightPanelTab==='aimatch'?'active':''}" onclick="switchTab('aimatch')">🤖 AI Match</button>
+                <button class="tab-btn ${state.rightPanelTab==='invoice'?'active':''}" onclick="switchTab('invoice')">📄 Invoice</button>
+              </div>
+              <div class="tab-panel ${state.rightPanelTab==='aimatch'?'active':''}" id="tab-aimatch">
+                <div style="background:var(--bg);border-radius:var(--radius);padding:1rem;text-align:center;margin-bottom:1rem;">
+                  ${imageHtml}
+                </div>
+                <button class="btn btn-primary" style="width:100%;margin-bottom:1rem;" onclick="triggerAIMatch()">🔍 AI Match</button>
+                <div id="aiMatchResults" style="display:${state.aiMatchTriggered ? 'block' : 'none'};">
+                  <h4 style="margin-bottom:0.5rem;">Top Matches</h4>
+                  ${mockProducts.slice(0,3).map((p,i)=>`
+                    <div class="ai-match-item" style="display:flex;gap:0.5rem;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:0.5rem;align-items:center;">
+                      <span style="font-size:2rem;">${p.image}</span>
+                      <div style="flex:1;"><strong style="font-size:0.8rem;">${p.name}</strong><p style="font-size:0.7rem;color:var(--text-muted);">KSH ${p.price.toFixed(2)}</p><span class="ai-match-score">${95-i*8}% match</span></div>
+                      <button class="btn btn-sm btn-primary" onclick="selectAndNotify(${p.id})">Notify</button>
+                    </div>`).join('')}
+                </div>
+              </div>
+              <div class="tab-panel ${state.rightPanelTab==='invoice'?'active':''}" id="tab-invoice">
+                <div class="invoice-mini-card">
+                  <h4>Create Invoice</h4>
+                  <div style="margin-bottom:0.5rem;"><label style="font-size:0.7rem;">Customer</label><input value="${conv.name}" readonly style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);"></div>
+                  <div style="margin-bottom:0.5rem;"><label style="font-size:0.7rem;">Search Product</label><input type="text" id="invoiceProductSearch" placeholder="Type product name..." oninput="filterInvoiceProducts()" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);"><select id="invProd" onchange="updateInvoiceProduct()" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);margin-top:0.25rem;">${mockProducts.map(p=>`<option value="${p.id}">${p.name} (KSH ${p.price.toFixed(2)})</option>`).join('')}</select></div>
+                  <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;"><div style="flex:1;"><label style="font-size:0.7rem;">Unit Price (KSH)</label><input type="number" id="invUnitPrice" value="0" step="0.01" oninput="updateInvTotal()" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);"></div><div style="flex:1;"><label style="font-size:0.7rem;">Qty</label><input type="number" id="invQty" value="1" min="1" oninput="updateInvTotal()" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);"></div></div>
+                  <div style="margin-bottom:0.5rem;"><label style="font-size:0.7rem;">Total Cost (KSH)</label><input id="invTotal" readonly style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-weight:600;"></div>
+                  <button class="btn btn-primary btn-sm" onclick="generateAndSendInvoice()">Generate & Send</button>
+                </div>
+              </div>
+            </div>`;
+        }
+
+        function triggerAIMatch() {
+            state.aiMatchTriggered = true;
+            const results = document.getElementById('aiMatchResults');
+            if (results) results.style.display = 'block';
+            showToast('AI matching completed');
+        }
+
+        function switchTab(tab) {
+            state.rightPanelTab = tab;
+            $$('#rightPanel .tab-btn').forEach(btn => btn.classList.remove('active'));
+            $$('#rightPanel .tab-panel').forEach(panel => panel.classList.remove('active'));
+            const activeBtn = [...$$('#rightPanel .tab-btn')].find(b => b.textContent.includes(tab==='aimatch'?'AI Match':'Invoice'));
+            if (activeBtn) activeBtn.classList.add('active');
+            const activePanel = document.getElementById(`tab-${tab}`);
+            if (activePanel) activePanel.classList.add('active');
+            if (tab === 'invoice') setTimeout(updateInvoiceProduct, 50);
+        }
+
+        function filterInvoiceProducts() {
+            const search = $('#invoiceProductSearch')?.value.toLowerCase() || '';
+            const select = $('#invProd');
+            if (!select) return;
+            const options = [...select.options];
+            options.forEach(opt => {
+                const text = opt.text.toLowerCase();
+                opt.style.display = text.includes(search) ? '' : 'none';
+            });
+        }
+
+        function updateInvoiceProduct() {
+            const select = $('#invProd');
+            if (!select) return;
+            const product = mockProducts.find(p => p.id == select.value);
+            const unitPrice = $('#invUnitPrice');
+            if (unitPrice && product) unitPrice.value = product.price;
+            updateInvTotal();
+        }
+
+        function updateInvTotal() {
+            const price = parseFloat($('#invUnitPrice')?.value) || 0;
+            const qty = parseInt($('#invQty')?.value) || 1;
+            if ($('#invTotal')) $('#invTotal').value = (price * qty).toFixed(2);
+        }
+
+        function generateAndSendInvoice() {
+            if (!state.selectedConversation) return;
+            const conv = state.selectedConversation;
+            const select = $('#invProd');
+            const prodId = select?.value;
+            const product = mockProducts.find(p => p.id == prodId);
+            if (!product) return;
+            const price = parseFloat($('#invUnitPrice')?.value) || product.price;
+            const qty = parseInt($('#invQty')?.value) || 1;
+            const total = (price * qty).toFixed(2);
+            conv.messages.push({
+                from: 'admin',
+                text: `📄 Invoice generated for ${conv.name}:\nProduct: ${product.name}\nQuantity: ${qty}\nUnit Price: KSH ${price.toFixed(2)}\nTotal Cost: KSH ${total}`,
+                time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
+            });
+            conv.lastMsg = `Invoice sent - KSH ${total}`;
+            showToast('Invoice generated and sent to customer');
+            renderPage('requests');
+        }
+
+        function selectAndNotify(productId) {
+            if (!state.selectedConversation) return;
+            const product = mockProducts.find(p => p.id === productId);
+            if (!product) return;
+            const conv = state.selectedConversation;
+            const message = `Good news! The item ${product.name} is available at KSH ${product.price.toFixed(2)}. Would you like to proceed?`;
+            conv.messages.push({
+                from: 'admin',
+                text: message,
+                time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
+            });
+            conv.lastMsg = message;
+            showToast(`Notified customer about ${product.name}`);
+            renderPage('requests');
+        }
+
+        function sendQuickReply(type) {
+            if (!state.selectedConversation) return;
+            const conv = state.selectedConversation;
+            let message = '';
+            switch(type) {
+                case 'payment': message = 'We accept M-Pesa, bank transfer, and cash on delivery. Please let us know your preferred method.'; break;
+                case 'invoice': message = 'Your invoice has been generated. Please check and confirm.'; break;
+                case 'order': message = 'Your order has been placed successfully. We\'ll deliver within 2-3 business days.'; break;
+            }
+            conv.messages.push({from:'admin',text:message,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})});
+            conv.lastMsg = message;
+            renderPage('requests');
+            showToast('Quick reply sent');
+        }
+
+        function renderCatalogue() {
+            const grouped = {}; mockProducts.forEach(p=>{ if(!grouped[p.category]) grouped[p.category]=[]; grouped[p.category].push(p); });
+            let html = `<div class="page active"><div class="flex-between mb-2"><h2>Catalogue</h2><button class="btn btn-primary btn-sm" onclick="showToast('Add product')">+ Add</button></div><input placeholder="Search..." style="margin-bottom:1rem;" oninput="filterCatalogue(this.value)">`;
+            for(const [cat,prods] of Object.entries(grouped)) {
+                html += `<div class="cat-header" onclick="toggleCatSection(this)"><span class="arrow">▶</span> ${cat} <span class="badge badge-neutral">${prods.length}</span></div><div class="product-grid" style="margin-bottom:1rem;">${prods.map(p=>`<div class="product-card" onclick="showProductDetail(${p.id})" data-name="${p.name.toLowerCase()}" data-cat="${p.category.toLowerCase()}" data-sku="${p.sku.toLowerCase()}"><div class="product-img" style="font-size:2rem;">${p.image}</div><div class="product-info"><div class="product-name">${p.name}</div><div class="product-price">KSH ${p.price.toFixed(2)}</div><div class="product-stock">${p.stock>0?'<span class="badge badge-success">In Stock</span>':'<span class="badge badge-danger">Out</span>'}</div></div></div>`).join('')}</div>`;
+            }
+            return html+'</div>';
+        }
+
+        function renderCategories() {
+            return `<div class="page active"><div class="flex-between mb-2"><h2>Categories</h2><button class="btn btn-primary btn-sm" onclick="addCategory()">+ Add</button></div><table><thead><tr><th>Name</th><th>Products</th><th>Actions</th></tr></thead><tbody>${mockCategories.map(c=>`<tr><td>${c.name}</td><td><span class="badge badge-info">${c.productCount}</span></td><td><button class="btn btn-sm btn-ghost" onclick="editCategory(${c.id})">✏️</button><button class="btn btn-sm btn-ghost" style="color:#EF4444;" onclick="showConfirm('Delete','Delete ${c.name}?',()=>showToast('Deleted'))">🗑️</button></td></tr>`).join('')}</tbody></table></div>`;
+        }
+
+        function renderOrders() {
+            return `<div class="page active"><div class="flex-between mb-2"><h2>Orders</h2><button class="btn btn-primary btn-sm" onclick="showToast('New order')">+ New</button></div><div style="display:flex;gap:0.5rem;margin-bottom:1rem;"><button class="btn btn-sm btn-outline" onclick="filterOrders('all')">All</button><button class="btn btn-sm btn-outline" onclick="filterOrders('Paid')">Paid</button><button class="btn btn-sm btn-outline" onclick="filterOrders('Pending')">Pending</button><button class="btn btn-sm btn-outline" onclick="filterOrders('Cancelled')">Cancelled</button></div><table id="ordersTable"><thead><tr><th>ID</th><th>Customer</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead><tbody>${mockOrders.map(o=>`<tr data-status="${o.status}" onclick="showOrderDetail(${o.id})"><td>#${o.id}</td><td>${o.customerName}</td><td>KSH ${o.amount.toFixed(2)}</td><td><span class="badge ${o.status==='Paid'?'badge-success':o.status==='Pending'?'badge-warning':'badge-danger'}">${o.status}</span></td><td>${o.date}</td></tr>`).join('')}</tbody></table></div>`;
+        }
+
+        function renderAnalytics() {
+            return `<div class="page active"><h2>Analytics</h2><select onchange="updateAnalyticsRange(this.value)"><option>7 Days</option><option>30 Days</option></select>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1rem;margin-top:1rem;">
+                <div class="card"><div class="card-header">Messages</div><div class="chart-container"><canvas id="chartMessages"></canvas></div></div>
+                <div class="card"><div class="card-header">Top Products</div><div class="chart-container"><canvas id="chartTopProducts"></canvas></div></div>
+                <div class="card"><div class="card-header">Revenue</div><div class="chart-container"><canvas id="chartRevenue"></canvas></div></div>
+                <div class="card"><div class="card-header">Funnel</div><div class="chart-container"><canvas id="chartFunnel"></canvas></div></div>
+              </div></div>`;
+        }
+
+        function renderInvoices() {
+            return `<div class="page active"><h2>Invoices</h2><table><thead><tr><th>ID</th><th>Customer</th><th>Amount</th><th>Status</th></tr></thead><tbody>${mockInvoices.map(i=>`<tr><td>#${i.id}</td><td>${i.customer}</td><td>KSH ${i.amount}</td><td>${i.status}</td></tr>`).join('')}</tbody></table></div>`;
+        }
+
+        function renderStaff() {
+            return `<div class="page active"><h2>Staff</h2><button class="btn btn-primary btn-sm" onclick="addStaffMember()">+ Add</button><table><thead><tr><th>Username</th><th>Role</th></tr></thead><tbody>${mockStaff.map(s=>`<tr><td>${s.username}</td><td>${s.role}</td></tr>`).join('')}</tbody></table></div>`;
+        }
+
+        // ==================== INTERACTIONS ====================
+        function selectConversation(id) { state.selectedConversation=mockConversations.find(c=>c.id===id); state.rightPanelVisible=true; state.rightPanelTab='aimatch'; state.aiMatchTriggered=false; renderPage('requests'); }
+        function filterConversations(q) { $$('#chatListItems .chat-list-item').forEach(el=>el.style.display=el.textContent.toLowerCase().includes(q.toLowerCase())?'':'none'); }
+        function sendMessage() {
+            const input = $('#chatInput'); if(!input||!state.selectedConversation) return;
+            const text=input.value.trim(); if(!text) return;
+            state.selectedConversation.messages.push({from:'admin',text,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})});
+            input.value=''; renderPage('requests'); setTimeout(()=>{ const mc=$('#chatMessages'); if(mc) mc.scrollTop=mc.scrollHeight; },100);
+        }
+        function handleChatKey(e) { if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendMessage(); } }
+        function updateConvStatus(id,status) { const c=mockConversations.find(c=>c.id===id); if(c){c.status=status; renderPage('requests'); showToast(`Status: ${status}`); } }
+        function showProductDetail(id) { const p=mockProducts.find(p=>p.id===id); if(p) openRightPanel(`<div style="padding:1rem;"><h3>${p.name}</h3><p>KSH ${p.price}</p></div>`); }
+        function showOrderDetail(id) { const o=mockOrders.find(o=>o.id===id); if(o) openRightPanel(`<div style="padding:1rem;"><h3>Order #${o.id}</h3><p>${o.customerName}</p></div>`); }
+        function filterOrders(status) { $$('#ordersTable tbody tr').forEach(r=>r.style.display=status==='all'?'':r.dataset.status===status?'':'none'); }
+        function filterCatalogue(q) { $$('.product-card').forEach(card=>{ const match=card.textContent.toLowerCase().includes(q.toLowerCase()); card.style.display=q?match?'':'none':''; }); }
+        function toggleCatSection(header) { const grid=header.nextElementSibling; if(grid&&grid.classList.contains('product-grid')){ const hidden=grid.style.display==='none'; grid.style.display=hidden?'':'none'; header.classList.toggle('collapsed',!hidden); header.querySelector('.arrow').textContent=hidden?'▼':'▶'; } }
+        function addCategory() { const n=prompt('Category name:'); if(n){ mockCategories.push({id:mockCategories.length+1,name:n,productCount:0}); renderPage('categories'); } }
+        function editCategory(id) { const c=mockCategories.find(c=>c.id===id); if(c){ const n=prompt('Edit name:',c.name); if(n){c.name=n; renderPage('categories');} } }
+        function addStaffMember() { const u=prompt('Username:'); if(u){ mockStaff.push({id:mockStaff.length+1,username:u,role:'Staff'}); renderPage('staff'); } }
+        function updateAnalyticsRange() { initAnalyticsCharts(); }
+
+        function initAnalyticsCharts() {
+            const configs = [
+                { id:'chartMessages', type:'line', data:{ labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], datasets:[{ data:[22,28,35,30,42,25,18], borderColor:'#E8742A', backgroundColor:'rgba(232,116,42,0.1)', fill:true }] } },
+                { id:'chartTopProducts', type:'bar', data:{ labels:mockProducts.slice(0,5).map(p=>p.name.split(' ')[0]), datasets:[{ data:mockProducts.slice(0,5).map(p=>p.sold), backgroundColor:'#E8742A' }] } },
+                { id:'chartRevenue', type:'doughnut', data:{ labels:['Brakes','Filters','Ignition','Lighting','Electrical'], datasets:[{ data:[8500,4200,3200,6100,7800], backgroundColor:['#E8742A','#F59E0B','#3B82F6','#22C55E','#8B5CF6'] }] } },
+                { id:'chartFunnel', type:'bar', data:{ labels:['Requests','Inquiries','Orders','Paid'], datasets:[{ data:[156,89,42,28], backgroundColor:['#94A3B8','#F59E0B','#3B82F6','#22C55E'] }] } },
+            ];
+            configs.forEach(cfg=>{
+                const canvas=document.getElementById(cfg.id); if(!canvas) return;
+                const existing=Chart.getChart(canvas); if(existing) existing.destroy();
+                new Chart(canvas, { type:cfg.type, data:cfg.data, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales: cfg.type!=='doughnut'?{ y:{ beginAtZero:true } }:{} } });
+            });
+        }
+
+        function handleGlobalSearch(q) { if(q.length>2) showToast(`Search: ${q}`); }
+
+        // ==================== AUTH ====================
+        function handleLogin() {
+            if($('#username').value.trim()==='admin' && $('#password').value.trim()==='admin') {
+                state.currentUser={username:'admin',role:'Admin'};
+                $('#loginPage').style.display='none'; $('#appContainer').classList.add('active');
+                updateThemeIcons(); renderPage('dashboard'); showToast('Welcome!');
+            } else $('#loginError').classList.add('show');
+        }
+        function handleLogout() { state.currentUser=null; $('#appContainer').classList.remove('active'); $('#loginPage').style.display='flex'; }
+        function handleSwitchUser() { handleLogout(); }
+
+        function updateThemeIcons() {
+            const dark = state.theme==='dark';
+            $('#sunIcon').style.display=dark?'none':'block'; $('#moonIcon').style.display=dark?'block':'none';
+        }
+
+        // ==================== INIT ====================
+        function init() {
+            const savedTheme = localStorage.getItem('bhekams-theme')||'light';
+            state.theme=savedTheme; document.documentElement.setAttribute('data-theme', state.theme);
+            updateThemeIcons();
+            const savedSidebar = localStorage.getItem('bhekams-sidebar');
+            if(savedSidebar==='collapsed' || savedSidebar===null) { state.sidebarCollapsed=true; $('#sidebar').classList.add('collapsed'); }
+            else { state.sidebarCollapsed=false; $('#sidebar').classList.remove('collapsed'); }
+            $('#password').addEventListener('keydown',e=>{ if(e.key==='Enter') handleLogin(); });
+            $('#supportModal').addEventListener('click',function(e){ if(e.target===this) closeSupportModal(); });
+            $('#confirmModal').addEventListener('click',function(e){ if(e.target===this) closeConfirmModal(); });
+            window.addEventListener('resize',()=>{ if(window.innerWidth>1024&&state.rightPanelVisible) $('#panelOverlay').classList.remove('show'); });
+        }
+        init();
+    </script>
+</body>
+</html>

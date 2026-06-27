@@ -6,36 +6,28 @@ namespace SphereScheduleAPI.Domain.Entities
     public class Participant : BaseEntity
     {
         [Key]
-        public Guid ParticipantId { get; set; }
+        public Guid ParticipantID { get; set; }
 
         [Required]
-        public Guid AppointmentId { get; set; }
+        public Guid AppointmentID { get; set; }
 
-        public Guid? UserId { get; set; }
+        public Guid? UserID { get; set; }
 
-        [Required]
-        [EmailAddress]
-        [MaxLength(255)]
-        public string Email { get; set; } = string.Empty;
+        public string? Email { get; set; }
 
-        [MaxLength(100)]
         public string? FullName { get; set; }
 
-        [Required]
-        [MaxLength(20)]
-        public string InvitationStatus { get; set; } = "pending";
+        public string? InvitationStatus { get; set; } = "pending";
 
         public DateTimeOffset? ResponseReceivedAt { get; set; }
 
-        [Required]
-        [MaxLength(20)]
-        public string ParticipantRole { get; set; } = "attendee";
+        public string? ParticipantRole { get; set; } = "attendee";
+        // REMOVED: CreatedAt, UpdatedAt, IsDeleted, DeletedAt (inherited from BaseEntity)
 
-        // Navigation properties
-        [ForeignKey("AppointmentId")]
+        [ForeignKey("AppointmentID")]
         public virtual Appointment? Appointment { get; set; }
 
-        [ForeignKey("UserId")]
+        [ForeignKey("UserID")]
         public virtual User? User { get; set; }
     }
 }

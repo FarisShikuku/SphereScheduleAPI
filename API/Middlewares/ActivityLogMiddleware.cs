@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Security.Claims;
 using SphereScheduleAPI.Application.Interfaces;
+using SphereScheduleAPI.Application.DTOs;
 
 namespace SphereScheduleAPI.API.Middlewares
 {
@@ -71,9 +72,9 @@ namespace SphereScheduleAPI.API.Middlewares
                     var activityType = GetActivityTypeFromRequest(method, path);
                     var details = $"{method} {path} completed in {durationMs}ms with status {statusCode}";
 
-                    await activityLogService.CreateActivityLogAsync(new Application.DTOs.CreateActivityLogDto
+                    await activityLogService.CreateActivityLogAsync(new CreateActivityLogDto
                     {
-                        UserId = userId,
+                        UserID = userId,
                         ActivityType = activityType,
                         IpAddress = ipAddress,
                         UserAgent = userAgent,
@@ -101,9 +102,9 @@ namespace SphereScheduleAPI.API.Middlewares
                 var activityType = GetActivityTypeFromRequest(method, path);
                 var details = $"{method} {path} failed after {durationMs}ms: {exception.Message}";
 
-                await activityLogService.CreateActivityLogAsync(new Application.DTOs.CreateActivityLogDto
+                await activityLogService.CreateActivityLogAsync(new CreateActivityLogDto
                 {
-                    UserId = userId,
+                    UserID = userId,
                     ActivityType = activityType,
                     IpAddress = ipAddress,
                     UserAgent = userAgent,
@@ -120,7 +121,8 @@ namespace SphereScheduleAPI.API.Middlewares
         private Guid? GetUserIdFromContext(HttpContext context)
         {
             var userIdClaim = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                            ?? context.User.FindFirst("sub")?.Value;
+                            ?? context.User.FindFirst("sub")?.Value
+                            ?? context.User.FindFirst("UserID")?.Value;
 
             if (Guid.TryParse(userIdClaim, out var userId))
             {
@@ -142,7 +144,8 @@ namespace SphereScheduleAPI.API.Middlewares
                 path.Contains("/swagger") ||
                 path.Contains(".css") ||
                 path.Contains(".js") ||
-                path.Contains(".ico"))
+                path.Contains(".ico") ||
+                path.Contains("/api-docs"))
             {
                 return false;
             }
@@ -157,9 +160,15 @@ namespace SphereScheduleAPI.API.Middlewares
             return method is "POST" or "PUT" or "DELETE" or "PATCH";
         }
 
+        /// <summary>
+        /// Maps HTTP methods and paths to the exact ActivityType values allowed by the CHECK constraint
+        /// Allowed values: 'create', 'login', 'logout', 'create_task', 'update_task', 'delete_task',
+        /// 'create_appointment', 'update_appointment', 'delete_appointment', 'create_user', 'update_user',
+        /// 'delete_user', 'change_settings', 'export_data', 'share_item'
+        /// </summary>
         private string GetActivityTypeFromRequest(string method, string path)
         {
-            // Map HTTP methods and paths to activity types
+            // Authentication endpoints
             if (path.Contains("/api/auth/login"))
             {
                 return "login";
@@ -170,15 +179,93 @@ namespace SphereScheduleAPI.API.Middlewares
                 return "logout";
             }
 
-            // Map CRUD operations
-            return method switch
+            // Task endpoints
+            if (path.Contains("/api/tasks") || path.Contains("/api/Tasks"))
             {
-                "POST" => "create",
-                "PUT" or "PATCH" => "update",
-                "DELETE" => "delete",
-                "GET" when path.Contains("/api/export") => "export_data",
-                _ => "api_request"
-            };
+                return method switch
+                {
+                    "POST" => "create_task",
+                    "PUT" or "PATCH" => "update_task",
+                    "DELETE" => "delete_task",
+                    "GET" when path.Contains("/export") => "export_data",
+                    _ => "api_request"
+                };
+            }
+
+            // Appointment endpoints
+            if (path.Contains("/api/appointments") || path.Contains("/api/Appointments"))
+            {
+                return method switch
+                {
+                    "POST" => "create_appointment",
+                    "PUT" or "PATCH" => "update_appointment",
+                    "DELETE" => "delete_appointment",
+                    "GET" when path.Contains("/export") => "export_data",
+                    _ => "api_request"
+                };
+            }
+
+            // User endpoints (including registration)
+            if (path.Contains("/api/users") || path.Contains("/api/auth/register"))
+            {
+                return method switch
+                {
+                    "POST" when path.Contains("/register") => "create_user",
+                    "POST" => "create_user",
+                    "PUT" or "PATCH" => "update_user",
+                    "DELETE" => "delete_user",
+                    _ => "api_request"
+                };
+            }
+
+            // Settings/Preferences endpoints
+            if (path.Contains("/api/settings") ||
+                path.Contains("/api/preferences") ||
+                path.Contains("/api/users/preferences"))
+            {
+                return "change_settings";
+            }
+
+            // Export endpoints
+            if (path.Contains("/export"))
+            {
+                return "export_data";
+            }
+
+            // Share endpoints
+            if (path.Contains("/share"))
+            {
+                return "share_item";
+            }
+
+            // Category endpoints
+            if (path.Contains("/api/categories"))
+            {
+                return method switch
+                {
+                    "POST" => "create_task",      // Creating a category is like creating a task
+                    "PUT" or "PATCH" => "update_task",
+                    "DELETE" => "delete_task",
+                    _ => "api_request"
+                };
+            }
+
+            // Dashboard/Statistics endpoints (read-only)
+            if (path.Contains("/api/dashboard") ||
+                path.Contains("/api/statistics") ||
+                path.Contains("/api/dailystats"))
+            {
+                return "api_request";
+            }
+
+            // Create activity log endpoint (prevent infinite loop)
+            if (path.Contains("/api/activitylogs"))
+            {
+                return "api_request";
+            }
+
+            // Default fallback for any other API requests
+            return "api_request";
         }
     }
 }

@@ -28,18 +28,18 @@ namespace SphereScheduleAPI.API.Controllers
         [ProducesResponseType(typeof(IEnumerable<ParticipantDto>), 200)]
         public async Task<IActionResult> GetParticipants([FromQuery] ParticipantFilterDto filterDto)
         {
-            var userId = GetUserIdFromToken();
+            var UserID = GetUserIDFromToken();
 
             // If no appointment ID is specified, get all appointments where user is a participant
-            if (!filterDto.AppointmentId.HasValue)
+            if (!filterDto.AppointmentID.HasValue)
             {
                 return await GetUserInvitations(filterDto);
             }
 
             // Check if user owns the appointment or is a participant
-            var appointment = await _appointmentService.GetAppointmentByIdAsync(filterDto.AppointmentId.Value);
-            var isOwner = appointment.UserId == userId;
-            var isParticipant = await _participantService.CheckIfUserIsParticipantAsync(filterDto.AppointmentId.Value, userId);
+            var appointment = await _appointmentService.GetAppointmentByIdAsync(filterDto.AppointmentID.Value);
+            var isOwner = appointment.UserID == UserID;
+            var isParticipant = await _participantService.CheckIfUserIsParticipantAsync(filterDto.AppointmentID.Value, UserID);
 
             if (!isOwner && !isParticipant)
             {
@@ -57,12 +57,12 @@ namespace SphereScheduleAPI.API.Controllers
         {
             var participant = await _participantService.GetParticipantByIdAsync(id, includeDetails);
 
-            var userId = GetUserIdFromToken();
-            var appointment = await _appointmentService.GetAppointmentByIdAsync(participant.AppointmentId);
+            var UserID = GetUserIDFromToken();
+            var appointment = await _appointmentService.GetAppointmentByIdAsync(participant.AppointmentID);
 
-            var isOwner = appointment.UserId == userId;
-            var isParticipant = await _participantService.CheckIfUserIsParticipantAsync(participant.AppointmentId, userId);
-            var isSelf = participant.UserId == userId ||
+            var isOwner = appointment.UserID == UserID;
+            var isParticipant = await _participantService.CheckIfUserIsParticipantAsync(participant.AppointmentID, UserID);
+            var isSelf = participant.UserID == UserID ||
                         participant.Email.Equals(GetUserEmail(), StringComparison.OrdinalIgnoreCase);
 
             if (!isOwner && !isParticipant && !isSelf)
@@ -73,22 +73,22 @@ namespace SphereScheduleAPI.API.Controllers
             return Ok(participant);
         }
 
-        [HttpPost("appointment/{appointmentId}")]
+        [HttpPost("appointment/{AppointmentID}")]
         [ProducesResponseType(typeof(ParticipantDto), 201)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
-        public async Task<IActionResult> AddParticipant(Guid appointmentId, [FromBody] CreateParticipantDto createDto)
+        public async Task<IActionResult> AddParticipant(Guid AppointmentID, [FromBody] CreateParticipantDto createDto)
         {
-            var appointment = await _appointmentService.GetAppointmentByIdAsync(appointmentId);
-            var userId = GetUserIdFromToken();
+            var appointment = await _appointmentService.GetAppointmentByIdAsync(AppointmentID);
+            var UserID = GetUserIDFromToken();
 
-            if (appointment.UserId != userId)
+            if (appointment.UserID != UserID)
             {
                 return Forbid();
             }
 
-            var participant = await _participantService.CreateParticipantAsync(appointmentId, createDto);
-            return CreatedAtAction(nameof(GetParticipantById), new { id = participant.ParticipantId }, participant);
+            var participant = await _participantService.CreateParticipantAsync(AppointmentID, createDto);
+            return CreatedAtAction(nameof(GetParticipantById), new { id = participant.ParticipantID }, participant);
         }
 
         [HttpPost("bulk")]
@@ -97,16 +97,16 @@ namespace SphereScheduleAPI.API.Controllers
         [ProducesResponseType(404)]
         public async Task<IActionResult> AddParticipantsBulk([FromBody] BulkAddParticipantsDto bulkDto)
         {
-            var appointment = await _appointmentService.GetAppointmentByIdAsync(bulkDto.AppointmentId);
-            var userId = GetUserIdFromToken();
+            var appointment = await _appointmentService.GetAppointmentByIdAsync(bulkDto.AppointmentID);
+            var UserID = GetUserIDFromToken();
 
-            if (appointment.UserId != userId)
+            if (appointment.UserID != UserID)
             {
                 return Forbid();
             }
 
             var participants = await _participantService.CreateParticipantsBulkAsync(bulkDto);
-            return CreatedAtAction(nameof(GetParticipants), new { appointmentId = bulkDto.AppointmentId }, participants);
+            return CreatedAtAction(nameof(GetParticipants), new { AppointmentID = bulkDto.AppointmentID }, participants);
         }
 
         [HttpPut("{id}")]
@@ -116,10 +116,10 @@ namespace SphereScheduleAPI.API.Controllers
         public async Task<IActionResult> UpdateParticipant(Guid id, [FromBody] UpdateParticipantDto updateDto)
         {
             var participant = await _participantService.GetParticipantByIdAsync(id);
-            var appointment = await _appointmentService.GetAppointmentByIdAsync(participant.AppointmentId);
-            var userId = GetUserIdFromToken();
+            var appointment = await _appointmentService.GetAppointmentByIdAsync(participant.AppointmentID);
+            var UserID = GetUserIDFromToken();
 
-            if (appointment.UserId != userId)
+            if (appointment.UserID != UserID)
             {
                 return Forbid();
             }
@@ -135,12 +135,12 @@ namespace SphereScheduleAPI.API.Controllers
         public async Task<IActionResult> UpdateParticipantStatus(Guid id, [FromBody] UpdateParticipantStatusDto statusDto)
         {
             var participant = await _participantService.GetParticipantByIdAsync(id);
-            var userId = GetUserIdFromToken();
+            var UserID = GetUserIDFromToken();
 
             // Allow if user is the participant or appointment owner
-            var appointment = await _appointmentService.GetAppointmentByIdAsync(participant.AppointmentId);
-            var isOwner = appointment.UserId == userId;
-            var isSelf = participant.UserId == userId ||
+            var appointment = await _appointmentService.GetAppointmentByIdAsync(participant.AppointmentID);
+            var isOwner = appointment.UserID == UserID;
+            var isSelf = participant.UserID == UserID ||
                         participant.Email.Equals(GetUserEmail(), StringComparison.OrdinalIgnoreCase);
 
             if (!isOwner && !isSelf)
@@ -158,10 +158,10 @@ namespace SphereScheduleAPI.API.Controllers
         public async Task<IActionResult> DeleteParticipant(Guid id)
         {
             var participant = await _participantService.GetParticipantByIdAsync(id);
-            var appointment = await _appointmentService.GetAppointmentByIdAsync(participant.AppointmentId);
-            var userId = GetUserIdFromToken();
+            var appointment = await _appointmentService.GetAppointmentByIdAsync(participant.AppointmentID);
+            var UserID = GetUserIDFromToken();
 
-            if (appointment.UserId != userId)
+            if (appointment.UserID != UserID)
             {
                 return Forbid();
             }
@@ -170,40 +170,40 @@ namespace SphereScheduleAPI.API.Controllers
             return NoContent();
         }
 
-        [HttpDelete("appointment/{appointmentId}")]
+        [HttpDelete("appointment/{AppointmentID}")]
         [ProducesResponseType(204)]
         [ProducesResponseType(404)]
-        public async Task<IActionResult> DeleteAllParticipants(Guid appointmentId)
+        public async Task<IActionResult> DeleteAllParticipants(Guid AppointmentID)
         {
-            var appointment = await _appointmentService.GetAppointmentByIdAsync(appointmentId);
-            var userId = GetUserIdFromToken();
+            var appointment = await _appointmentService.GetAppointmentByIdAsync(AppointmentID);
+            var UserID = GetUserIDFromToken();
 
-            if (appointment.UserId != userId)
+            if (appointment.UserID != UserID)
             {
                 return Forbid();
             }
 
-            await _participantService.DeleteParticipantsByAppointmentAsync(appointmentId);
+            await _participantService.DeleteParticipantsByAppointmentAsync(AppointmentID);
             return NoContent();
         }
 
-        [HttpGet("appointment/{appointmentId}/stats")]
+        [HttpGet("appointment/{AppointmentID}/stats")]
         [ProducesResponseType(typeof(ParticipantStatisticsDto), 200)]
         [ProducesResponseType(404)]
-        public async Task<IActionResult> GetParticipantStatistics(Guid appointmentId)
+        public async Task<IActionResult> GetParticipantStatistics(Guid AppointmentID)
         {
-            var appointment = await _appointmentService.GetAppointmentByIdAsync(appointmentId);
-            var userId = GetUserIdFromToken();
+            var appointment = await _appointmentService.GetAppointmentByIdAsync(AppointmentID);
+            var UserID = GetUserIDFromToken();
 
-            var isOwner = appointment.UserId == userId;
-            var isParticipant = await _participantService.CheckIfUserIsParticipantAsync(appointmentId, userId);
+            var isOwner = appointment.UserID == UserID;
+            var isParticipant = await _participantService.CheckIfUserIsParticipantAsync(AppointmentID, UserID);
 
             if (!isOwner && !isParticipant)
             {
                 return Forbid();
             }
 
-            var statistics = await _participantService.GetParticipantStatisticsAsync(appointmentId);
+            var statistics = await _participantService.GetParticipantStatisticsAsync(AppointmentID);
             return Ok(statistics);
         }
 
@@ -211,27 +211,27 @@ namespace SphereScheduleAPI.API.Controllers
         [ProducesResponseType(typeof(IEnumerable<ParticipantDto>), 200)]
         public async Task<IActionResult> GetMyInvitations([FromQuery] ParticipantFilterDto filterDto)
         {
-            var userId = GetUserIdFromToken();
-            var invitations = await _participantService.GetInvitationsByUserAsync(userId, filterDto);
+            var UserID = GetUserIDFromToken();
+            var invitations = await _participantService.GetInvitationsByUserAsync(UserID, filterDto);
             return Ok(invitations);
         }
 
-        [HttpGet("check/{appointmentId}")]
+        [HttpGet("check/{AppointmentID}")]
         [ProducesResponseType(typeof(object), 200)]
-        public async Task<IActionResult> CheckIfParticipant(Guid appointmentId)
+        public async Task<IActionResult> CheckIfParticipant(Guid AppointmentID)
         {
-            var userId = GetUserIdFromToken();
+            var UserID = GetUserIDFromToken();
             var userEmail = GetUserEmail();
 
-            var isParticipantByUserId = await _participantService.CheckIfUserIsParticipantAsync(appointmentId, userId);
-            var isParticipantByEmail = await _participantService.CheckIfEmailIsParticipantAsync(appointmentId, userEmail);
+            var isParticipantByUserID = await _participantService.CheckIfUserIsParticipantAsync(AppointmentID, UserID);
+            var isParticipantByEmail = await _participantService.CheckIfEmailIsParticipantAsync(AppointmentID, userEmail);
 
             return Ok(new
             {
-                UserId = userId,
+                UserID = UserID,
                 Email = userEmail,
-                IsParticipant = isParticipantByUserId || isParticipantByEmail,
-                ByUserId = isParticipantByUserId,
+                IsParticipant = isParticipantByUserID || isParticipantByEmail,
+                ByUserID = isParticipantByUserID,
                 ByEmail = isParticipantByEmail
             });
         }
@@ -242,10 +242,10 @@ namespace SphereScheduleAPI.API.Controllers
         public async Task<IActionResult> ResendInvitation(Guid id)
         {
             var participant = await _participantService.GetParticipantByIdAsync(id);
-            var appointment = await _appointmentService.GetAppointmentByIdAsync(participant.AppointmentId);
-            var userId = GetUserIdFromToken();
+            var appointment = await _appointmentService.GetAppointmentByIdAsync(participant.AppointmentID);
+            var UserID = GetUserIDFromToken();
 
-            if (appointment.UserId != userId)
+            if (appointment.UserID != UserID)
             {
                 return Forbid();
             }
@@ -258,20 +258,20 @@ namespace SphereScheduleAPI.API.Controllers
         [ProducesResponseType(typeof(IEnumerable<ParticipantDto>), 200)]
         public async Task<IActionResult> SearchParticipants(
             [FromQuery] string searchTerm,
-            [FromQuery] Guid? appointmentId = null)
+            [FromQuery] Guid? AppointmentID = null)
         {
             if (string.IsNullOrWhiteSpace(searchTerm) || searchTerm.Length < 2)
             {
                 return BadRequest(new { message = "Search term must be at least 2 characters" });
             }
 
-            if (appointmentId.HasValue)
+            if (AppointmentID.HasValue)
             {
-                var appointment = await _appointmentService.GetAppointmentByIdAsync(appointmentId.Value);
-                var userId = GetUserIdFromToken();
+                var appointment = await _appointmentService.GetAppointmentByIdAsync(AppointmentID.Value);
+                var UserID = GetUserIDFromToken();
 
-                var isOwner = appointment.UserId == userId;
-                var isParticipant = await _participantService.CheckIfUserIsParticipantAsync(appointmentId.Value, userId);
+                var isOwner = appointment.UserID == UserID;
+                var isParticipant = await _participantService.CheckIfUserIsParticipantAsync(AppointmentID.Value, UserID);
 
                 if (!isOwner && !isParticipant)
                 {
@@ -279,18 +279,18 @@ namespace SphereScheduleAPI.API.Controllers
                 }
             }
 
-            var participants = await _participantService.SearchParticipantsAsync(searchTerm, appointmentId);
+            var participants = await _participantService.SearchParticipantsAsync(searchTerm, AppointmentID);
             return Ok(participants);
         }
 
         private async Task<IActionResult> GetUserInvitations(ParticipantFilterDto filterDto)
         {
-            var userId = GetUserIdFromToken();
-            var invitations = await _participantService.GetInvitationsByUserAsync(userId, filterDto);
+            var UserID = GetUserIDFromToken();
+            var invitations = await _participantService.GetInvitationsByUserAsync(UserID, filterDto);
             return Ok(invitations);
         }
 
-        private Guid GetUserIdFromToken()
+        private Guid GetUserIDFromToken()
         {
             // Extract user ID from JWT token
             // For demo, returning a hardcoded ID

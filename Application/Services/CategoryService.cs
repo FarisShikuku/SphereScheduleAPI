@@ -18,18 +18,18 @@ namespace SphereScheduleAPI.Application.Services
             _context = context;
         }
 
-        public async Task<Category> GetCategoryByIdAsync(Guid categoryId)
+        public async Task<Category> GetCategoryByIdAsync(Guid CategoryID)
         {
             return await _context.Categories
                 .Include(c => c.Tasks)
-                .FirstOrDefaultAsync(c => c.CategoryId == categoryId && !c.IsDeleted);
+                .FirstOrDefaultAsync(c => c.CategoryID == CategoryID && !c.IsDeleted);
         }
 
-        public async Task<IEnumerable<Category>> GetUserCategoriesAsync(Guid userId)
+        public async Task<IEnumerable<Category>> GetUserCategoriesAsync(Guid UserID)
         {
             return await _context.Categories
                 .Include(c => c.Tasks)
-                .Where(c => c.UserId == userId && !c.IsDeleted)
+                .Where(c => c.UserID == UserID && !c.IsDeleted)
                 .OrderBy(c => c.CategoryOrder)
                 .ThenBy(c => c.CategoryName)
                 .ToListAsync();
@@ -38,10 +38,10 @@ namespace SphereScheduleAPI.Application.Services
         public async Task<Category> CreateCategoryAsync(Category category)
         {
             // Validate unique category name for user
-            if (await CategoryNameExistsAsync(category.UserId, category.CategoryName))
+            if (await CategoryNameExistsAsync(category.UserID, category.CategoryName))
                 throw new InvalidOperationException($"Category '{category.CategoryName}' already exists for this user");
 
-            category.CategoryId = Guid.NewGuid();
+            category.CategoryID = Guid.NewGuid();
             category.CreatedAt = DateTimeOffset.UtcNow;
             category.UpdatedAt = DateTimeOffset.UtcNow;
             category.IsDeleted = false;
@@ -50,7 +50,7 @@ namespace SphereScheduleAPI.Application.Services
             if (category.CategoryOrder == 0)
             {
                 var maxOrder = await _context.Categories
-                    .Where(c => c.UserId == category.UserId && !c.IsDeleted)
+                    .Where(c => c.UserID == category.UserID && !c.IsDeleted)
                     .MaxAsync(c => (int?)c.CategoryOrder) ?? 0;
                 category.CategoryOrder = maxOrder + 1;
             }
@@ -62,13 +62,13 @@ namespace SphereScheduleAPI.Application.Services
 
         public async Task<Category> UpdateCategoryAsync(Category category)
         {
-            var existing = await GetCategoryByIdAsync(category.CategoryId);
+            var existing = await GetCategoryByIdAsync(category.CategoryID);
             if (existing == null)
-                throw new KeyNotFoundException($"Category with ID {category.CategoryId} not found");
+                throw new KeyNotFoundException($"Category with ID {category.CategoryID} not found");
 
             // Validate unique category name if changing
             if (existing.CategoryName != category.CategoryName &&
-                await CategoryNameExistsAsync(existing.UserId, category.CategoryName, category.CategoryId))
+                await CategoryNameExistsAsync(existing.UserID, category.CategoryName, category.CategoryID))
                 throw new InvalidOperationException($"Category '{category.CategoryName}' already exists for this user");
 
             category.UpdatedAt = DateTimeOffset.UtcNow;
@@ -77,9 +77,9 @@ namespace SphereScheduleAPI.Application.Services
             return category;
         }
 
-        public async Task<bool> DeleteCategoryAsync(Guid categoryId)
+        public async Task<bool> DeleteCategoryAsync(Guid CategoryID)
         {
-            var category = await GetCategoryByIdAsync(categoryId);
+            var category = await GetCategoryByIdAsync(CategoryID);
             if (category == null) return false;
 
             // Check if category has associated tasks
@@ -101,10 +101,10 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<bool> RestoreCategoryAsync(Guid categoryId)
+        public async Task<bool> RestoreCategoryAsync(Guid CategoryID)
         {
             var category = await _context.Categories
-                .FirstOrDefaultAsync(c => c.CategoryId == categoryId && c.IsDeleted);
+                .FirstOrDefaultAsync(c => c.CategoryID == CategoryID && c.IsDeleted);
 
             if (category == null) return false;
 
@@ -115,10 +115,10 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<IEnumerable<Category>> GetCategoriesByTypeAsync(Guid userId, string categoryType)
+        public async Task<IEnumerable<Category>> GetCategoriesByTypeAsync(Guid UserID, string categoryType)
         {
             return await _context.Categories
-                .Where(c => c.UserId == userId &&
+                .Where(c => c.UserID == UserID &&
                            !c.IsDeleted &&
                            c.CategoryType == categoryType)
                 .OrderBy(c => c.CategoryOrder)
@@ -126,22 +126,22 @@ namespace SphereScheduleAPI.Application.Services
                 .ToListAsync();
         }
 
-        public async Task<Category> GetDefaultCategoryAsync(Guid userId)
+        public async Task<Category> GetDefaultCategoryAsync(Guid UserID)
         {
             return await _context.Categories
-                .FirstOrDefaultAsync(c => c.UserId == userId &&
+                .FirstOrDefaultAsync(c => c.UserID == UserID &&
                                         !c.IsDeleted &&
                                         c.IsDefault);
         }
 
-        public async Task<IEnumerable<Category>> GetCategoriesWithTaskCountAsync(Guid userId)
+        public async Task<IEnumerable<Category>> GetCategoriesWithTaskCountAsync(Guid UserID)
         {
             return await _context.Categories
-                .Where(c => c.UserId == userId && !c.IsDeleted)
+                .Where(c => c.UserID == UserID && !c.IsDeleted)
                 .Select(c => new Category
                 {
-                    CategoryId = c.CategoryId,
-                    UserId = c.UserId,
+                    CategoryID = c.CategoryID,
+                    UserID = c.UserID,
                     CategoryName = c.CategoryName,
                     CategoryType = c.CategoryType,
                     Description = c.Description,
@@ -158,27 +158,27 @@ namespace SphereScheduleAPI.Application.Services
                 .ToListAsync();
         }
 
-        public async Task<Category> GetCategoryByNameAsync(Guid userId, string categoryName)
+        public async Task<Category> GetCategoryByNameAsync(Guid UserID, string categoryName)
         {
             return await _context.Categories
-                .FirstOrDefaultAsync(c => c.UserId == userId &&
+                .FirstOrDefaultAsync(c => c.UserID == UserID &&
                                         !c.IsDeleted &&
                                         c.CategoryName == categoryName);
         }
 
-        public async Task<bool> SetDefaultCategoryAsync(Guid categoryId)
+        public async Task<bool> SetDefaultCategoryAsync(Guid CategoryID)
         {
-            var category = await GetCategoryByIdAsync(categoryId);
+            var category = await GetCategoryByIdAsync(CategoryID);
             if (category == null) return false;
 
             // Remove default from all other user categories
             var userCategories = await _context.Categories
-                .Where(c => c.UserId == category.UserId && !c.IsDeleted)
+                .Where(c => c.UserID == category.UserID && !c.IsDeleted)
                 .ToListAsync();
 
             foreach (var cat in userCategories)
             {
-                cat.IsDefault = (cat.CategoryId == categoryId);
+                cat.IsDefault = (cat.CategoryID == CategoryID);
                 cat.UpdatedAt = DateTimeOffset.UtcNow;
             }
 
@@ -186,19 +186,19 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<bool> UpdateCategoryOrderAsync(Guid categoryId, int newOrder)
+        public async Task<bool> UpdateCategoryOrderAsync(Guid CategoryID, int newOrder)
         {
-            var category = await GetCategoryByIdAsync(categoryId);
+            var category = await GetCategoryByIdAsync(CategoryID);
             if (category == null) return false;
 
             // Get all categories for this user
             var categories = await _context.Categories
-                .Where(c => c.UserId == category.UserId && !c.IsDeleted)
+                .Where(c => c.UserID == category.UserID && !c.IsDeleted)
                 .OrderBy(c => c.CategoryOrder)
                 .ToListAsync();
 
             // Remove category from list and insert at new position
-            var categoryToMove = categories.FirstOrDefault(c => c.CategoryId == categoryId);
+            var categoryToMove = categories.FirstOrDefault(c => c.CategoryID == CategoryID);
             if (categoryToMove == null) return false;
 
             categories.Remove(categoryToMove);
@@ -216,15 +216,15 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<bool> ReorderCategoriesAsync(Guid userId, Dictionary<Guid, int> categoryOrders)
+        public async Task<bool> ReorderCategoriesAsync(Guid UserID, Dictionary<Guid, int> categoryOrders)
         {
             var categories = await _context.Categories
-                .Where(c => c.UserId == userId && !c.IsDeleted)
+                .Where(c => c.UserID == UserID && !c.IsDeleted)
                 .ToListAsync();
 
             foreach (var category in categories)
             {
-                if (categoryOrders.TryGetValue(category.CategoryId, out int newOrder))
+                if (categoryOrders.TryGetValue(category.CategoryID, out int newOrder))
                 {
                     category.CategoryOrder = newOrder;
                     category.UpdatedAt = DateTimeOffset.UtcNow;
@@ -235,9 +235,9 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<bool> UpdateCategoryColorAsync(Guid categoryId, string colorCode)
+        public async Task<bool> UpdateCategoryColorAsync(Guid CategoryID, string colorCode)
         {
-            var category = await GetCategoryByIdAsync(categoryId);
+            var category = await GetCategoryByIdAsync(CategoryID);
             if (category == null) return false;
 
             category.ColorCode = colorCode;
@@ -247,9 +247,9 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<bool> UpdateCategoryIconAsync(Guid categoryId, string iconName)
+        public async Task<bool> UpdateCategoryIconAsync(Guid CategoryID, string iconName)
         {
-            var category = await GetCategoryByIdAsync(categoryId);
+            var category = await GetCategoryByIdAsync(CategoryID);
             if (category == null) return false;
 
             category.IconName = iconName;
@@ -259,17 +259,17 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<int> GetCategoryCountByUserAsync(Guid userId)
+        public async Task<int> GetCategoryCountByUserAsync(Guid UserID)
         {
             return await _context.Categories
-                .CountAsync(c => c.UserId == userId && !c.IsDeleted);
+                .CountAsync(c => c.UserID == UserID && !c.IsDeleted);
         }
 
-        public async Task<Dictionary<string, int>> GetCategoryUsageStatisticsAsync(Guid userId)
+        public async Task<Dictionary<string, int>> GetCategoryUsageStatisticsAsync(Guid UserID)
         {
             var categories = await _context.Categories
                 .Include(c => c.Tasks)
-                .Where(c => c.UserId == userId && !c.IsDeleted)
+                .Where(c => c.UserID == UserID && !c.IsDeleted)
                 .ToListAsync();
 
             var stats = new Dictionary<string, int>();
@@ -283,11 +283,11 @@ namespace SphereScheduleAPI.Application.Services
             return stats;
         }
 
-        public async Task<Category> GetMostUsedCategoryAsync(Guid userId)
+        public async Task<Category> GetMostUsedCategoryAsync(Guid UserID)
         {
             var categories = await _context.Categories
                 .Include(c => c.Tasks)
-                .Where(c => c.UserId == userId && !c.IsDeleted)
+                .Where(c => c.UserID == UserID && !c.IsDeleted)
                 .ToListAsync();
 
             return categories
@@ -295,24 +295,24 @@ namespace SphereScheduleAPI.Application.Services
                 .FirstOrDefault();
         }
 
-        public async Task<IEnumerable<Category>> GetUnusedCategoriesAsync(Guid userId, int daysThreshold = 30)
+        public async Task<IEnumerable<Category>> GetUnusedCategoriesAsync(Guid UserID, int daysThreshold = 30)
         {
             var cutoffDate = DateTimeOffset.UtcNow.AddDays(-daysThreshold);
 
             return await _context.Categories
                 .Include(c => c.Tasks)
-                .Where(c => c.UserId == userId &&
+                .Where(c => c.UserID == UserID &&
                            !c.IsDeleted &&
                            !c.Tasks.Any(t => !t.IsDeleted && t.CreatedAt >= cutoffDate))
                 .OrderBy(c => c.CategoryName)
                 .ToListAsync();
         }
 
-        public async Task<bool> DeleteMultipleCategoriesAsync(Guid[] categoryIds)
+        public async Task<bool> DeleteMultipleCategoriesAsync(Guid[] CategoryIDs)
         {
             var categories = await _context.Categories
                 .Include(c => c.Tasks)
-                .Where(c => categoryIds.Contains(c.CategoryId) && !c.IsDeleted)
+                .Where(c => CategoryIDs.Contains(c.CategoryID) && !c.IsDeleted)
                 .ToListAsync();
 
             // Check if any category has associated tasks
@@ -336,10 +336,10 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<bool> UpdateMultipleCategoriesAsync(Guid[] categoryIds, Action<Category> updateAction)
+        public async Task<bool> UpdateMultipleCategoriesAsync(Guid[] CategoryIDs, Action<Category> updateAction)
         {
             var categories = await _context.Categories
-                .Where(c => categoryIds.Contains(c.CategoryId) && !c.IsDeleted)
+                .Where(c => CategoryIDs.Contains(c.CategoryID) && !c.IsDeleted)
                 .ToListAsync();
 
             foreach (var category in categories)
@@ -360,10 +360,10 @@ namespace SphereScheduleAPI.Application.Services
                 .ToListAsync();
         }
 
-        public async Task<bool> InitializeDefaultCategoriesAsync(Guid userId)
+        public async Task<bool> InitializeDefaultCategoriesAsync(Guid UserID)
         {
             // Check if user already has categories
-            var existingCategories = await GetUserCategoriesAsync(userId);
+            var existingCategories = await GetUserCategoriesAsync(UserID);
             if (existingCategories.Any())
                 return false;
 
@@ -371,7 +371,7 @@ namespace SphereScheduleAPI.Application.Services
             {
                 new Category
                 {
-                    UserId = userId,
+                    UserID = UserID,
                     CategoryName = "Work",
                     CategoryType = "system",
                     Description = "Work-related tasks",
@@ -382,7 +382,7 @@ namespace SphereScheduleAPI.Application.Services
                 },
                 new Category
                 {
-                    UserId = userId,
+                    UserID = UserID,
                     CategoryName = "Personal",
                     CategoryType = "system",
                     Description = "Personal tasks",
@@ -392,7 +392,7 @@ namespace SphereScheduleAPI.Application.Services
                 },
                 new Category
                 {
-                    UserId = userId,
+                    UserID = UserID,
                     CategoryName = "Health",
                     CategoryType = "system",
                     Description = "Health and fitness",
@@ -402,7 +402,7 @@ namespace SphereScheduleAPI.Application.Services
                 },
                 new Category
                 {
-                    UserId = userId,
+                    UserID = UserID,
                     CategoryName = "Education",
                     CategoryType = "system",
                     Description = "Learning and education",
@@ -412,7 +412,7 @@ namespace SphereScheduleAPI.Application.Services
                 },
                 new Category
                 {
-                    UserId = userId,
+                    UserID = UserID,
                     CategoryName = "Shopping",
                     CategoryType = "system",
                     Description = "Shopping lists",
@@ -422,7 +422,7 @@ namespace SphereScheduleAPI.Application.Services
                 },
                 new Category
                 {
-                    UserId = userId,
+                    UserID = UserID,
                     CategoryName = "Finance",
                     CategoryType = "system",
                     Description = "Financial tasks",
@@ -432,7 +432,7 @@ namespace SphereScheduleAPI.Application.Services
                 },
                 new Category
                 {
-                    UserId = userId,
+                    UserID = UserID,
                     CategoryName = "Entertainment",
                     CategoryType = "system",
                     Description = "Entertainment and leisure",
@@ -442,7 +442,7 @@ namespace SphereScheduleAPI.Application.Services
                 },
                 new Category
                 {
-                    UserId = userId,
+                    UserID = UserID,
                     CategoryName = "Other",
                     CategoryType = "system",
                     Description = "Other tasks",
@@ -454,7 +454,7 @@ namespace SphereScheduleAPI.Application.Services
 
             foreach (var category in defaultCategories)
             {
-                category.CategoryId = Guid.NewGuid();
+                category.CategoryID = Guid.NewGuid();
                 category.CreatedAt = DateTimeOffset.UtcNow;
                 category.UpdatedAt = DateTimeOffset.UtcNow;
                 _context.Categories.Add(category);
@@ -464,11 +464,11 @@ namespace SphereScheduleAPI.Application.Services
             return true;
         }
 
-        public async Task<bool> ResetToDefaultCategoriesAsync(Guid userId)
+        public async Task<bool> ResetToDefaultCategoriesAsync(Guid UserID)
         {
             // Delete all user's custom categories
             var customCategories = await _context.Categories
-                .Where(c => c.UserId == userId &&
+                .Where(c => c.UserID == UserID &&
                            c.CategoryType == "custom" &&
                            !c.IsDeleted)
                 .ToListAsync();
@@ -484,30 +484,30 @@ namespace SphereScheduleAPI.Application.Services
             }
 
             // Initialize default categories if none exist
-            var existingCategories = await GetUserCategoriesAsync(userId);
+            var existingCategories = await GetUserCategoriesAsync(UserID);
             if (!existingCategories.Any())
-                await InitializeDefaultCategoriesAsync(userId);
+                await InitializeDefaultCategoriesAsync(UserID);
 
             await _context.SaveChangesAsync();
             return true;
         }
 
-        public async Task<bool> CategoryNameExistsAsync(Guid userId, string categoryName, Guid? excludeCategoryId = null)
+        public async Task<bool> CategoryNameExistsAsync(Guid UserID, string categoryName, Guid? excludeCategoryID = null)
         {
             var query = _context.Categories
-                .Where(c => c.UserId == userId &&
+                .Where(c => c.UserID == UserID &&
                            !c.IsDeleted &&
                            c.CategoryName == categoryName);
 
-            if (excludeCategoryId.HasValue)
-                query = query.Where(c => c.CategoryId != excludeCategoryId.Value);
+            if (excludeCategoryID.HasValue)
+                query = query.Where(c => c.CategoryID != excludeCategoryID.Value);
 
             return await query.AnyAsync();
         }
 
-        public async Task<bool> CanDeleteCategoryAsync(Guid categoryId)
+        public async Task<bool> CanDeleteCategoryAsync(Guid CategoryID)
         {
-            var category = await GetCategoryByIdAsync(categoryId);
+            var category = await GetCategoryByIdAsync(CategoryID);
             if (category == null) return false;
 
             // Can delete if no tasks or it's a system category

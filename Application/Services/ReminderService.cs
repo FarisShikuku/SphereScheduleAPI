@@ -29,71 +29,71 @@ namespace SphereScheduleAPI.Application.Services
             try
             {
                 // Validate user exists
-                var userExists = await _context.Users.AnyAsync(u => u.UserId == createDto.UserId && u.IsActive);
+                var userExists = await _context.Users.AnyAsync(u => u.UserID == createDto.UserID && u.IsActive);
                 if (!userExists)
                 {
-                    throw new ArgumentException($"User with ID {createDto.UserId} not found or inactive");
+                    throw new ArgumentException($"User with ID {createDto.UserID} not found or inactive");
                 }
 
-                // Validate task exists if TaskId is provided
-                if (createDto.TaskId.HasValue)
+                // Validate task exists if TaskID is provided
+                if (createDto.TaskID.HasValue)
                 {
-                    var taskExists = await _context.Tasks.AnyAsync(t => t.TaskId == createDto.TaskId.Value && !t.IsDeleted);
+                    var taskExists = await _context.Tasks.AnyAsync(t => t.TaskID == createDto.TaskID.Value && !t.IsDeleted);
                     if (!taskExists)
                     {
-                        throw new ArgumentException($"Task with ID {createDto.TaskId} not found");
+                        throw new ArgumentException($"Task with ID {createDto.TaskID} not found");
                     }
                 }
 
-                // Validate appointment exists if AppointmentId is provided
-                if (createDto.AppointmentId.HasValue)
+                // Validate appointment exists if AppointmentID is provided
+                if (createDto.AppointmentID.HasValue)
                 {
-                    var appointmentExists = await _context.Appointments.AnyAsync(a => a.AppointmentId == createDto.AppointmentId.Value && !a.IsDeleted);
+                    var appointmentExists = await _context.Appointments.AnyAsync(a => a.AppointmentID == createDto.AppointmentID.Value && !a.IsDeleted);
                     if (!appointmentExists)
                     {
-                        throw new ArgumentException($"Appointment with ID {createDto.AppointmentId} not found");
+                        throw new ArgumentException($"Appointment with ID {createDto.AppointmentID} not found");
                     }
                 }
 
                 var reminder = _mapper.Map<Reminder>(createDto);
-                reminder.ReminderId = Guid.NewGuid();
+                reminder.ReminderID = Guid.NewGuid();
                 reminder.CreatedAt = DateTimeOffset.UtcNow;
                 reminder.UpdatedAt = DateTimeOffset.UtcNow;
 
                 _context.Reminders.Add(reminder);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("Created reminder {ReminderId} for user {UserId}", reminder.ReminderId, reminder.UserId);
+                _logger.LogInformation("Created reminder {ReminderID} for user {UserID}", reminder.ReminderID, reminder.UserID);
 
                 return _mapper.Map<ReminderDto>(reminder);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating reminder for user {UserId}", createDto.UserId);
+                _logger.LogError(ex, "Error creating reminder for user {UserID}", createDto.UserID);
                 throw;
             }
         }
 
-        public async Task<ReminderDto> GetReminderByIdAsync(Guid reminderId)
+        public async Task<ReminderDto> GetReminderByIdAsync(Guid ReminderID)
         {
             var reminder = await _context.Reminders
                 .Include(r => r.User)
                 .Include(r => r.Task)
                 .Include(r => r.Appointment)
-                .FirstOrDefaultAsync(r => r.ReminderId == reminderId);
+                .FirstOrDefaultAsync(r => r.ReminderID == ReminderID);
 
             if (reminder == null)
             {
-                throw new KeyNotFoundException($"Reminder with ID {reminderId} not found");
+                throw new KeyNotFoundException($"Reminder with ID {ReminderID} not found");
             }
 
             return _mapper.Map<ReminderDto>(reminder);
         }
 
-        public async Task<IEnumerable<ReminderDto>> GetRemindersByUserIdAsync(Guid userId)
+        public async Task<IEnumerable<ReminderDto>> GetRemindersByUserIDAsync(Guid UserID)
         {
             var reminders = await _context.Reminders
-                .Where(r => r.UserId == userId)
+                .Where(r => r.UserID == UserID)
                 .Include(r => r.Task)
                 .Include(r => r.Appointment)
                 .OrderByDescending(r => r.ReminderDateTime)
@@ -111,19 +111,19 @@ namespace SphereScheduleAPI.Application.Services
                 .AsQueryable();
 
             // Apply filters
-            if (filterDto.UserId.HasValue)
+            if (filterDto.UserID.HasValue)
             {
-                query = query.Where(r => r.UserId == filterDto.UserId.Value);
+                query = query.Where(r => r.UserID == filterDto.UserID.Value);
             }
 
-            if (filterDto.TaskId.HasValue)
+            if (filterDto.TaskID.HasValue)
             {
-                query = query.Where(r => r.TaskId == filterDto.TaskId.Value);
+                query = query.Where(r => r.TaskID == filterDto.TaskID.Value);
             }
 
-            if (filterDto.AppointmentId.HasValue)
+            if (filterDto.AppointmentID.HasValue)
             {
-                query = query.Where(r => r.AppointmentId == filterDto.AppointmentId.Value);
+                query = query.Where(r => r.AppointmentID == filterDto.AppointmentID.Value);
             }
 
             if (!string.IsNullOrEmpty(filterDto.ReminderType))
@@ -166,12 +166,12 @@ namespace SphereScheduleAPI.Application.Services
             return _mapper.Map<IEnumerable<ReminderDto>>(reminders);
         }
 
-        public async Task<ReminderDto> UpdateReminderAsync(Guid reminderId, UpdateReminderDto updateDto)
+        public async Task<ReminderDto> UpdateReminderAsync(Guid ReminderID, UpdateReminderDto updateDto)
         {
-            var reminder = await _context.Reminders.FindAsync(reminderId);
+            var reminder = await _context.Reminders.FindAsync(ReminderID);
             if (reminder == null)
             {
-                throw new KeyNotFoundException($"Reminder with ID {reminderId} not found");
+                throw new KeyNotFoundException($"Reminder with ID {ReminderID} not found");
             }
 
             // Only allow updates to pending reminders
@@ -219,32 +219,32 @@ namespace SphereScheduleAPI.Application.Services
             reminder.UpdatedAt = DateTimeOffset.UtcNow;
 
             await _context.SaveChangesAsync();
-            _logger.LogInformation("Updated reminder {ReminderId}", reminderId);
+            _logger.LogInformation("Updated reminder {ReminderID}", ReminderID);
 
-            return await GetReminderByIdAsync(reminderId);
+            return await GetReminderByIdAsync(ReminderID);
         }
 
-        public async Task<bool> DeleteReminderAsync(Guid reminderId)
+        public async Task<bool> DeleteReminderAsync(Guid ReminderID)
         {
-            var reminder = await _context.Reminders.FindAsync(reminderId);
+            var reminder = await _context.Reminders.FindAsync(ReminderID);
             if (reminder == null)
             {
-                throw new KeyNotFoundException($"Reminder with ID {reminderId} not found");
+                throw new KeyNotFoundException($"Reminder with ID {ReminderID} not found");
             }
 
             _context.Reminders.Remove(reminder);
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Deleted reminder {ReminderId}", reminderId);
+            _logger.LogInformation("Deleted reminder {ReminderID}", ReminderID);
             return true;
         }
 
-        public async Task<bool> MarkReminderAsSentAsync(Guid reminderId)
+        public async Task<bool> MarkReminderAsSentAsync(Guid ReminderID)
         {
-            var reminder = await _context.Reminders.FindAsync(reminderId);
+            var reminder = await _context.Reminders.FindAsync(ReminderID);
             if (reminder == null)
             {
-                throw new KeyNotFoundException($"Reminder with ID {reminderId} not found");
+                throw new KeyNotFoundException($"Reminder with ID {ReminderID} not found");
             }
 
             reminder.Status = "sent";
@@ -252,16 +252,16 @@ namespace SphereScheduleAPI.Application.Services
             reminder.UpdatedAt = DateTimeOffset.UtcNow;
 
             await _context.SaveChangesAsync();
-            _logger.LogInformation("Marked reminder {ReminderId} as sent", reminderId);
+            _logger.LogInformation("Marked reminder {ReminderID} as sent", ReminderID);
             return true;
         }
 
-        public async Task<bool> CancelReminderAsync(Guid reminderId)
+        public async Task<bool> CancelReminderAsync(Guid ReminderID)
         {
-            var reminder = await _context.Reminders.FindAsync(reminderId);
+            var reminder = await _context.Reminders.FindAsync(ReminderID);
             if (reminder == null)
             {
-                throw new KeyNotFoundException($"Reminder with ID {reminderId} not found");
+                throw new KeyNotFoundException($"Reminder with ID {ReminderID} not found");
             }
 
             // Only allow cancellation of pending reminders
@@ -274,7 +274,7 @@ namespace SphereScheduleAPI.Application.Services
             reminder.UpdatedAt = DateTimeOffset.UtcNow;
 
             await _context.SaveChangesAsync();
-            _logger.LogInformation("Cancelled reminder {ReminderId}", reminderId);
+            _logger.LogInformation("Cancelled reminder {ReminderID}", ReminderID);
             return true;
         }
 
@@ -303,12 +303,12 @@ namespace SphereScheduleAPI.Application.Services
             return _mapper.Map<IEnumerable<ReminderDto>>(reminders);
         }
 
-        public async Task<bool> RescheduleReminderAsync(Guid reminderId, DateTimeOffset newDateTime)
+        public async Task<bool> RescheduleReminderAsync(Guid ReminderID, DateTimeOffset newDateTime)
         {
-            var reminder = await _context.Reminders.FindAsync(reminderId);
+            var reminder = await _context.Reminders.FindAsync(ReminderID);
             if (reminder == null)
             {
-                throw new KeyNotFoundException($"Reminder with ID {reminderId} not found");
+                throw new KeyNotFoundException($"Reminder with ID {ReminderID} not found");
             }
 
             // Only allow rescheduling of pending reminders
@@ -327,13 +327,13 @@ namespace SphereScheduleAPI.Application.Services
             reminder.UpdatedAt = DateTimeOffset.UtcNow;
 
             await _context.SaveChangesAsync();
-            _logger.LogInformation("Rescheduled reminder {ReminderId} to {NewDateTime}", reminderId, newDateTime);
+            _logger.LogInformation("Rescheduled reminder {ReminderID} to {NewDateTime}", ReminderID, newDateTime);
             return true;
         }
 
-        public async Task<int> GetReminderCountByUserAsync(Guid userId, string? status = null)
+        public async Task<int> GetReminderCountByUserAsync(Guid UserID, string? status = null)
         {
-            var query = _context.Reminders.Where(r => r.UserId == userId);
+            var query = _context.Reminders.Where(r => r.UserID == UserID);
 
             if (!string.IsNullOrEmpty(status))
             {

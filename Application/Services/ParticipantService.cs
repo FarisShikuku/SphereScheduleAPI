@@ -28,22 +28,22 @@ namespace SphereScheduleAPI.Application.Services
             _emailService = emailService;
         }
 
-        public async Task<ParticipantDto> CreateParticipantAsync(Guid appointmentId, CreateParticipantDto createDto)
+        public async Task<ParticipantDto> CreateParticipantAsync(Guid AppointmentID, CreateParticipantDto createDto)
         {
             try
             {
                 // Validate appointment exists and is active
                 var appointment = await _context.Appointments
-                    .FirstOrDefaultAsync(a => a.AppointmentId == appointmentId && !a.IsDeleted);
+                    .FirstOrDefaultAsync(a => a.AppointmentID == AppointmentID && !a.IsDeleted);
 
                 if (appointment == null)
                 {
-                    throw new KeyNotFoundException($"Appointment with ID {appointmentId} not found");
+                    throw new KeyNotFoundException($"Appointment with ID {AppointmentID} not found");
                 }
 
                 // Check if participant already exists for this appointment
                 var existingParticipant = await _context.Participants
-                    .FirstOrDefaultAsync(p => p.AppointmentId == appointmentId &&
+                    .FirstOrDefaultAsync(p => p.AppointmentID == AppointmentID &&
                                              p.Email.ToLower() == createDto.Email.ToLower());
 
                 if (existingParticipant != null)
@@ -51,19 +51,19 @@ namespace SphereScheduleAPI.Application.Services
                     throw new InvalidOperationException($"Participant with email {createDto.Email} already exists for this appointment");
                 }
 
-                // If UserId is provided, validate user exists
-                if (createDto.UserId.HasValue)
+                // If UserID is provided, validate user exists
+                if (createDto.UserID.HasValue)
                 {
-                    var userExists = await _context.Users.AnyAsync(u => u.UserId == createDto.UserId.Value && u.IsActive);
+                    var userExists = await _context.Users.AnyAsync(u => u.UserID == createDto.UserID.Value && u.IsActive);
                     if (!userExists)
                     {
-                        throw new ArgumentException($"User with ID {createDto.UserId} not found or inactive");
+                        throw new ArgumentException($"User with ID {createDto.UserID} not found or inactive");
                     }
                 }
 
                 var participant = _mapper.Map<Participant>(createDto);
-                participant.ParticipantId = Guid.NewGuid();
-                participant.AppointmentId = appointmentId;
+                participant.ParticipantID = Guid.NewGuid();
+                participant.AppointmentID = AppointmentID;
                 participant.CreatedAt = DateTimeOffset.UtcNow;
                 participant.UpdatedAt = DateTimeOffset.UtcNow;
 
@@ -76,14 +76,14 @@ namespace SphereScheduleAPI.Application.Services
                     await SendInvitationEmailAsync(participant, appointment);
                 }
 
-                _logger.LogInformation("Created participant {ParticipantId} for appointment {AppointmentId}",
-                    participant.ParticipantId, appointmentId);
+                _logger.LogInformation("Created participant {ParticipantID} for appointment {AppointmentID}",
+                    participant.ParticipantID, AppointmentID);
 
-                return await GetParticipantByIdAsync(participant.ParticipantId, true);
+                return await GetParticipantByIdAsync(participant.ParticipantID, true);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating participant for appointment {AppointmentId}", appointmentId);
+                _logger.LogError(ex, "Error creating participant for appointment {AppointmentID}", AppointmentID);
                 throw;
             }
         }
@@ -94,11 +94,11 @@ namespace SphereScheduleAPI.Application.Services
             {
                 // Validate appointment exists and is active
                 var appointment = await _context.Appointments
-                    .FirstOrDefaultAsync(a => a.AppointmentId == bulkDto.AppointmentId && !a.IsDeleted);
+                    .FirstOrDefaultAsync(a => a.AppointmentID == bulkDto.AppointmentID && !a.IsDeleted);
 
                 if (appointment == null)
                 {
-                    throw new KeyNotFoundException($"Appointment with ID {bulkDto.AppointmentId} not found");
+                    throw new KeyNotFoundException($"Appointment with ID {bulkDto.AppointmentID} not found");
                 }
 
                 var newParticipants = new List<Participant>();
@@ -108,31 +108,31 @@ namespace SphereScheduleAPI.Application.Services
                 {
                     // Check if participant already exists
                     var existingParticipant = await _context.Participants
-                        .FirstOrDefaultAsync(p => p.AppointmentId == bulkDto.AppointmentId &&
+                        .FirstOrDefaultAsync(p => p.AppointmentID == bulkDto.AppointmentID &&
                                                  p.Email.ToLower() == participantDto.Email.ToLower());
 
                     if (existingParticipant != null)
                     {
-                        _logger.LogWarning("Participant with email {Email} already exists for appointment {AppointmentId}",
-                            participantDto.Email, bulkDto.AppointmentId);
+                        _logger.LogWarning("Participant with email {Email} already exists for appointment {AppointmentID}",
+                            participantDto.Email, bulkDto.AppointmentID);
                         continue;
                     }
 
-                    // If UserId is provided, validate user exists
-                    if (participantDto.UserId.HasValue)
+                    // If UserID is provided, validate user exists
+                    if (participantDto.UserID.HasValue)
                     {
-                        var userExists = await _context.Users.AnyAsync(u => u.UserId == participantDto.UserId.Value && u.IsActive);
+                        var userExists = await _context.Users.AnyAsync(u => u.UserID == participantDto.UserID.Value && u.IsActive);
                         if (!userExists)
                         {
-                            _logger.LogWarning("User with ID {UserId} not found for participant {Email}",
-                                participantDto.UserId, participantDto.Email);
+                            _logger.LogWarning("User with ID {UserID} not found for participant {Email}",
+                                participantDto.UserID, participantDto.Email);
                             continue;
                         }
                     }
 
                     var participant = _mapper.Map<Participant>(participantDto);
-                    participant.ParticipantId = Guid.NewGuid();
-                    participant.AppointmentId = bulkDto.AppointmentId;
+                    participant.ParticipantID = Guid.NewGuid();
+                    participant.AppointmentID = bulkDto.AppointmentID;
                     participant.CreatedAt = DateTimeOffset.UtcNow;
                     participant.UpdatedAt = DateTimeOffset.UtcNow;
 
@@ -156,24 +156,24 @@ namespace SphereScheduleAPI.Application.Services
                     // Get created participants with details
                     foreach (var participant in newParticipants)
                     {
-                        var participantDto = await GetParticipantByIdAsync(participant.ParticipantId, true);
+                        var participantDto = await GetParticipantByIdAsync(participant.ParticipantID, true);
                         createdParticipants.Add(participantDto);
                     }
                 }
 
-                _logger.LogInformation("Created {Count} participants for appointment {AppointmentId}",
-                    newParticipants.Count, bulkDto.AppointmentId);
+                _logger.LogInformation("Created {Count} participants for appointment {AppointmentID}",
+                    newParticipants.Count, bulkDto.AppointmentID);
 
                 return createdParticipants;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating participants in bulk for appointment {AppointmentId}", bulkDto.AppointmentId);
+                _logger.LogError(ex, "Error creating participants in bulk for appointment {AppointmentID}", bulkDto.AppointmentID);
                 throw;
             }
         }
 
-        public async Task<ParticipantDto> GetParticipantByIdAsync(Guid participantId, bool includeDetails = false)
+        public async Task<ParticipantDto> GetParticipantByIdAsync(Guid ParticipantID, bool includeDetails = false)
         {
             var query = _context.Participants.AsQueryable();
 
@@ -185,11 +185,11 @@ namespace SphereScheduleAPI.Application.Services
             }
 
             var participant = await query
-                .FirstOrDefaultAsync(p => p.ParticipantId == participantId);
+                .FirstOrDefaultAsync(p => p.ParticipantID == ParticipantID);
 
             if (participant == null)
             {
-                throw new KeyNotFoundException($"Participant with ID {participantId} not found");
+                throw new KeyNotFoundException($"Participant with ID {ParticipantID} not found");
             }
 
             var participantDto = _mapper.Map<ParticipantDto>(participant);
@@ -217,25 +217,25 @@ namespace SphereScheduleAPI.Application.Services
             return participantDto;
         }
 
-        public async Task<ParticipantDto> GetParticipantByEmailAsync(Guid appointmentId, string email)
+        public async Task<ParticipantDto> GetParticipantByEmailAsync(Guid AppointmentID, string email)
         {
             var participant = await _context.Participants
                 .Include(p => p.Appointment)
                 .Include(p => p.User)
-                .FirstOrDefaultAsync(p => p.AppointmentId == appointmentId &&
+                .FirstOrDefaultAsync(p => p.AppointmentID == AppointmentID &&
                                          p.Email.ToLower() == email.ToLower());
 
             if (participant == null)
             {
-                throw new KeyNotFoundException($"Participant with email {email} not found for appointment {appointmentId}");
+                throw new KeyNotFoundException($"Participant with email {email} not found for appointment {AppointmentID}");
             }
 
             return _mapper.Map<ParticipantDto>(participant);
         }
 
-        public async Task<IEnumerable<ParticipantDto>> GetParticipantsByAppointmentIdAsync(Guid appointmentId, ParticipantFilterDto filterDto)
+        public async Task<IEnumerable<ParticipantDto>> GetParticipantsByAppointmentIDAsync(Guid AppointmentID, ParticipantFilterDto filterDto)
         {
-            filterDto.AppointmentId = appointmentId;
+            filterDto.AppointmentID = AppointmentID;
             return await GetParticipantsByFilterAsync(filterDto);
         }
 
@@ -244,14 +244,14 @@ namespace SphereScheduleAPI.Application.Services
             var query = _context.Participants.AsQueryable();
 
             // Apply filters
-            if (filterDto.AppointmentId.HasValue)
+            if (filterDto.AppointmentID.HasValue)
             {
-                query = query.Where(p => p.AppointmentId == filterDto.AppointmentId.Value);
+                query = query.Where(p => p.AppointmentID == filterDto.AppointmentID.Value);
             }
 
-            if (filterDto.UserId.HasValue)
+            if (filterDto.UserID.HasValue)
             {
-                query = query.Where(p => p.UserId == filterDto.UserId.Value);
+                query = query.Where(p => p.UserID == filterDto.UserID.Value);
             }
 
             if (!string.IsNullOrEmpty(filterDto.Email))
@@ -302,23 +302,23 @@ namespace SphereScheduleAPI.Application.Services
             return _mapper.Map<IEnumerable<ParticipantDto>>(participants);
         }
 
-        public async Task<IEnumerable<ParticipantDto>> GetInvitationsByUserAsync(Guid userId, ParticipantFilterDto filterDto)
+        public async Task<IEnumerable<ParticipantDto>> GetInvitationsByUserAsync(Guid UserID, ParticipantFilterDto filterDto)
         {
             // Get appointments where user is invited
             var userEmail = await _context.Users
-                .Where(u => u.UserId == userId)
+                .Where(u => u.UserID == UserID)
                 .Select(u => u.Email)
                 .FirstOrDefaultAsync();
 
             if (string.IsNullOrEmpty(userEmail))
             {
-                throw new ArgumentException($"User with ID {userId} not found");
+                throw new ArgumentException($"User with ID {UserID} not found");
             }
 
             var query = _context.Participants
                 .Include(p => p.Appointment)
                 .Include(p => p.User)
-                .Where(p => (p.UserId == userId || p.Email.ToLower() == userEmail.ToLower()) &&
+                .Where(p => (p.UserID == UserID || p.Email.ToLower() == userEmail.ToLower()) &&
                            !p.Appointment.IsDeleted);
 
             // Apply additional filters
@@ -349,14 +349,14 @@ namespace SphereScheduleAPI.Application.Services
             return _mapper.Map<IEnumerable<ParticipantDto>>(participants);
         }
 
-        public async Task<ParticipantDto> UpdateParticipantAsync(Guid participantId, UpdateParticipantDto updateDto)
+        public async Task<ParticipantDto> UpdateParticipantAsync(Guid ParticipantID, UpdateParticipantDto updateDto)
         {
             var participant = await _context.Participants
-                .FirstOrDefaultAsync(p => p.ParticipantId == participantId);
+                .FirstOrDefaultAsync(p => p.ParticipantID == ParticipantID);
 
             if (participant == null)
             {
-                throw new KeyNotFoundException($"Participant with ID {participantId} not found");
+                throw new KeyNotFoundException($"Participant with ID {ParticipantID} not found");
             }
 
             // Update properties if provided
@@ -366,9 +366,9 @@ namespace SphereScheduleAPI.Application.Services
                 if (updateDto.Email.ToLower() != participant.Email.ToLower())
                 {
                     var existingParticipant = await _context.Participants
-                        .FirstOrDefaultAsync(p => p.AppointmentId == participant.AppointmentId &&
+                        .FirstOrDefaultAsync(p => p.AppointmentID == participant.AppointmentID &&
                                                  p.Email.ToLower() == updateDto.Email.ToLower() &&
-                                                 p.ParticipantId != participantId);
+                                                 p.ParticipantID != ParticipantID);
 
                     if (existingParticipant != null)
                     {
@@ -402,34 +402,34 @@ namespace SphereScheduleAPI.Application.Services
                 participant.ParticipantRole = updateDto.ParticipantRole;
             }
 
-            if (updateDto.UserId.HasValue)
+            if (updateDto.UserID.HasValue)
             {
                 // Validate user exists
-                var userExists = await _context.Users.AnyAsync(u => u.UserId == updateDto.UserId.Value && u.IsActive);
+                var userExists = await _context.Users.AnyAsync(u => u.UserID == updateDto.UserID.Value && u.IsActive);
                 if (!userExists)
                 {
-                    throw new ArgumentException($"User with ID {updateDto.UserId} not found or inactive");
+                    throw new ArgumentException($"User with ID {updateDto.UserID} not found or inactive");
                 }
-                participant.UserId = updateDto.UserId.Value;
+                participant.UserID = updateDto.UserID.Value;
             }
 
             participant.UpdatedAt = DateTimeOffset.UtcNow;
 
             await _context.SaveChangesAsync();
-            _logger.LogInformation("Updated participant {ParticipantId}", participantId);
+            _logger.LogInformation("Updated participant {ParticipantID}", ParticipantID);
 
-            return await GetParticipantByIdAsync(participantId, true);
+            return await GetParticipantByIdAsync(ParticipantID, true);
         }
 
-        public async Task<ParticipantDto> UpdateParticipantStatusAsync(Guid participantId, UpdateParticipantStatusDto statusDto)
+        public async Task<ParticipantDto> UpdateParticipantStatusAsync(Guid ParticipantID, UpdateParticipantStatusDto statusDto)
         {
             var participant = await _context.Participants
                 .Include(p => p.Appointment)
-                .FirstOrDefaultAsync(p => p.ParticipantId == participantId);
+                .FirstOrDefaultAsync(p => p.ParticipantID == ParticipantID);
 
             if (participant == null)
             {
-                throw new KeyNotFoundException($"Participant with ID {participantId} not found");
+                throw new KeyNotFoundException($"Participant with ID {ParticipantID} not found");
             }
 
             // Check if appointment is still active
@@ -445,35 +445,35 @@ namespace SphereScheduleAPI.Application.Services
             await _context.SaveChangesAsync();
 
             // Log the response
-            _logger.LogInformation("Participant {ParticipantId} updated status to {Status} for appointment {AppointmentId}",
-                participantId, statusDto.Status, participant.AppointmentId);
+            _logger.LogInformation("Participant {ParticipantID} updated status to {Status} for appointment {AppointmentID}",
+                ParticipantID, statusDto.Status, participant.AppointmentID);
 
-            return await GetParticipantByIdAsync(participantId, true);
+            return await GetParticipantByIdAsync(ParticipantID, true);
         }
 
-        public async Task<bool> DeleteParticipantAsync(Guid participantId)
+        public async Task<bool> DeleteParticipantAsync(Guid ParticipantID)
         {
             var participant = await _context.Participants
-                .FirstOrDefaultAsync(p => p.ParticipantId == participantId);
+                .FirstOrDefaultAsync(p => p.ParticipantID == ParticipantID);
 
             if (participant == null)
             {
-                throw new KeyNotFoundException($"Participant with ID {participantId} not found");
+                throw new KeyNotFoundException($"Participant with ID {ParticipantID} not found");
             }
 
             _context.Participants.Remove(participant);
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Deleted participant {ParticipantId} from appointment {AppointmentId}",
-                participantId, participant.AppointmentId);
+            _logger.LogInformation("Deleted participant {ParticipantID} from appointment {AppointmentID}",
+                ParticipantID, participant.AppointmentID);
 
             return true;
         }
 
-        public async Task<bool> DeleteParticipantsByAppointmentAsync(Guid appointmentId)
+        public async Task<bool> DeleteParticipantsByAppointmentAsync(Guid AppointmentID)
         {
             var participants = await _context.Participants
-                .Where(p => p.AppointmentId == appointmentId)
+                .Where(p => p.AppointmentID == AppointmentID)
                 .ToListAsync();
 
             if (!participants.Any())
@@ -484,16 +484,16 @@ namespace SphereScheduleAPI.Application.Services
             _context.Participants.RemoveRange(participants);
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Deleted {Count} participants from appointment {AppointmentId}",
-                participants.Count, appointmentId);
+            _logger.LogInformation("Deleted {Count} participants from appointment {AppointmentID}",
+                participants.Count, AppointmentID);
 
             return true;
         }
 
-        public async Task<int> GetParticipantCountByAppointmentAsync(Guid appointmentId, string? status = null)
+        public async Task<int> GetParticipantCountByAppointmentAsync(Guid AppointmentID, string? status = null)
         {
             var query = _context.Participants
-                .Where(p => p.AppointmentId == appointmentId);
+                .Where(p => p.AppointmentID == AppointmentID);
 
             if (!string.IsNullOrEmpty(status))
             {
@@ -503,10 +503,10 @@ namespace SphereScheduleAPI.Application.Services
             return await query.CountAsync();
         }
 
-        public async Task<ParticipantStatisticsDto> GetParticipantStatisticsAsync(Guid appointmentId)
+        public async Task<ParticipantStatisticsDto> GetParticipantStatisticsAsync(Guid AppointmentID)
         {
             var participants = await _context.Participants
-                .Where(p => p.AppointmentId == appointmentId)
+                .Where(p => p.AppointmentID == AppointmentID)
                 .ToListAsync();
 
             var statistics = new ParticipantStatisticsDto
@@ -540,15 +540,15 @@ namespace SphereScheduleAPI.Application.Services
             return statistics;
         }
 
-        public async Task<bool> ResendInvitationAsync(Guid participantId)
+        public async Task<bool> ResendInvitationAsync(Guid ParticipantID)
         {
             var participant = await _context.Participants
                 .Include(p => p.Appointment)
-                .FirstOrDefaultAsync(p => p.ParticipantId == participantId);
+                .FirstOrDefaultAsync(p => p.ParticipantID == ParticipantID);
 
             if (participant == null)
             {
-                throw new KeyNotFoundException($"Participant with ID {participantId} not found");
+                throw new KeyNotFoundException($"Participant with ID {ParticipantID} not found");
             }
 
             // Check if appointment is still active
@@ -566,23 +566,23 @@ namespace SphereScheduleAPI.Application.Services
 
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Resent invitation to participant {ParticipantId} for appointment {AppointmentId}",
-                participantId, participant.AppointmentId);
+            _logger.LogInformation("Resent invitation to participant {ParticipantID} for appointment {AppointmentID}",
+                ParticipantID, participant.AppointmentID);
 
             return true;
         }
 
-        public async Task<bool> CheckIfUserIsParticipantAsync(Guid appointmentId, Guid userId)
+        public async Task<bool> CheckIfUserIsParticipantAsync(Guid AppointmentID, Guid UserID)
         {
-            // Check by UserId
-            var byUserId = await _context.Participants
-                .AnyAsync(p => p.AppointmentId == appointmentId && p.UserId == userId);
+            // Check by UserID
+            var byUserID = await _context.Participants
+                .AnyAsync(p => p.AppointmentID == AppointmentID && p.UserID == UserID);
 
-            if (byUserId) return true;
+            if (byUserID) return true;
 
             // Check by email
             var userEmail = await _context.Users
-                .Where(u => u.UserId == userId)
+                .Where(u => u.UserID == UserID)
                 .Select(u => u.Email)
                 .FirstOrDefaultAsync();
 
@@ -592,18 +592,18 @@ namespace SphereScheduleAPI.Application.Services
             }
 
             return await _context.Participants
-                .AnyAsync(p => p.AppointmentId == appointmentId &&
+                .AnyAsync(p => p.AppointmentID == AppointmentID &&
                               p.Email.ToLower() == userEmail.ToLower());
         }
 
-        public async Task<bool> CheckIfEmailIsParticipantAsync(Guid appointmentId, string email)
+        public async Task<bool> CheckIfEmailIsParticipantAsync(Guid AppointmentID, string email)
         {
             return await _context.Participants
-                .AnyAsync(p => p.AppointmentId == appointmentId &&
+                .AnyAsync(p => p.AppointmentID == AppointmentID &&
                               p.Email.ToLower() == email.ToLower());
         }
 
-        public async Task<IEnumerable<ParticipantDto>> SearchParticipantsAsync(string searchTerm, Guid? appointmentId = null)
+        public async Task<IEnumerable<ParticipantDto>> SearchParticipantsAsync(string searchTerm, Guid? AppointmentID = null)
         {
             var query = _context.Participants
                 .Include(p => p.Appointment)
@@ -611,9 +611,9 @@ namespace SphereScheduleAPI.Application.Services
                 .Where(p => p.Email.ToLower().Contains(searchTerm.ToLower()) ||
                            (p.FullName != null && p.FullName.ToLower().Contains(searchTerm.ToLower())));
 
-            if (appointmentId.HasValue)
+            if (AppointmentID.HasValue)
             {
-                query = query.Where(p => p.AppointmentId == appointmentId.Value);
+                query = query.Where(p => p.AppointmentID == AppointmentID.Value);
             }
 
             var participants = await query
